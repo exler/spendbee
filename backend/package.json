@@ -1,0 +1,22 @@
+{
+  "name": "spendbee-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.1.1",
+    "@elysiajs/jwt": "^1.1.1",
+    "elysia": "^1.1.23",
+    "drizzle-orm": "^0.36.4",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "drizzle-kit": "^0.28.1",
+    "bun-types": "latest"
+  }
+}
