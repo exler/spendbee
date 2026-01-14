@@ -5,97 +5,128 @@
 	import { user } from '$lib/stores/auth';
 	import { api } from '$lib/api';
 
-	interface Member {
+	interface GroupMember {
 		id: number;
-		name: string;
-		email: string;
-	}
-
-	interface MockUser {
-		id: number;
-		name: string;
+		userId: number | null;
+		name: string | null;
+		user?: {
+			id: number;
+			name: string;
+			email: string;
+		};
 	}
 
 	interface Group {
 		id: number;
 		name: string;
 		description: string | null;
-		members: Array<{ user: Member }>;
+		baseCurrency?: string;
+		createdBy?: number;
+		members: GroupMember[];
+	}
+
+	interface CurrencyBalance {
+		currency: string;
+		amount: number;
 	}
 
 	interface Expense {
 		id: number;
 		description: string;
+		note?: string;
 		amount: number;
+		currency?: string;
 		paidBy: number;
 		createdAt: Date;
-		payer: Member;
-		shares: Array<{ user: Member; share: number }>;
-		mockShares: Array<{ mockUser: MockUser; share: number }>;
+		payer: GroupMember;
+		shares: Array<{ member: GroupMember; share: number }>;
 	}
 
 	interface Balance {
-		userId: number;
-		userName: string;
+		memberId: number;
+		memberName: string;
 		balance: number;
-		isMock?: boolean;
+		balanceByCurrency?: CurrencyBalance[];
+		balanceInBaseCurrency?: number;
+		isGuest?: boolean;
 	}
 
 	interface Settlement {
 		id: number;
-		fromUser: Member | null;
-		toUser: Member | null;
-		fromMockUser: MockUser | null;
-		toMockUser: MockUser | null;
+		fromMember: GroupMember;
+		toMember: GroupMember;
 		amount: number;
+		currency?: string;
 		createdAt: Date;
 	}
 
 	let groupId: number;
 	let group: Group | null = null;
-	let mockUsers: MockUser[] = [];
+	let allMembers: GroupMember[] = [];
 	let expenses: Expense[] = [];
 	let balances: Balance[] = [];
 	let settlements: Settlement[] = [];
 	let loading = true;
 	let error = '';
-	let activeTab: 'expenses' | 'balances' | 'settlements' | 'members' = 'expenses';
+	let activeTab: 'expenses' | 'balances' | 'settlements' | 'members' | 'settings' = 'expenses';
 
 	let showAddExpense = false;
 	let showSettleDebt = false;
-	let showAddMockUser = false;
+	let showAddGuestMember = false;
+	let showInviteMember = false;
+	let showChangeCurrency = false;
 	let expenseDescription = '';
+	let expenseNote = '';
 	let expenseAmount = '';
+	let expenseCurrency = 'EUR';
+	let expenseDate = '';
+	let expensePaidBy = 0;
 	let selectedMembers: number[] = [];
-	let selectedMockMembers: number[] = [];
-	let settleFromUser = 0;
-	let settleToUser = 0;
-	let settleFromMockUser = 0;
-	let settleToMockUser = 0;
-	let settleFromIsMock = false;
-	let settleToIsMock = false;
+	let splitEvenly = true;
+	let customShares: { [memberId: number]: string } = {};
+	let settleFromMember = 0;
+	let settleToMember = 0;
 	let settleAmount = '';
-	let newMockUserName = '';
+	let settleCurrency = 'EUR';
+	let newGuestMemberName = '';
+	let inviteEmail = '';
+	let newBaseCurrency = 'EUR';
+	let supportedCurrencies: string[] = [];
+
+	let editGroupName = '';
+	let editGroupDescription = '';
+	let editGroupCurrency = 'EUR';
+	let settingsSaved = false;
 
 	onMount(() => {
 		if (!$user) {
 			goto('/login');
 			return;
 		}
-		groupId = parseInt($page.params.id);
+		groupId = Number.parseInt($page.params.id);
 		loadGroupData();
 	});
 
 	async function loadGroupData() {
 		loading = true;
 		try {
-			[group, mockUsers, expenses, balances, settlements] = await Promise.all([
-				api.groups.get(groupId),
-				api.mockUsers.list(groupId),
-				api.expenses.list(groupId),
-				api.expenses.balances(groupId),
-				api.expenses.settlements(groupId),
-			]);
+			[group, allMembers, expenses, balances, settlements, supportedCurrencies] =
+				await Promise.all([
+					api.groups.get(groupId),
+					api.members.list(groupId),
+					api.expenses.list(groupId),
+					api.expenses.balances(groupId),
+					api.expenses.settlements(groupId),
+					api.groups.currencies().then((res) => res.currencies),
+				]);
+			if (group) {
+				expenseCurrency = group.baseCurrency || 'EUR';
+				settleCurrency = group.baseCurrency || 'EUR';
+				newBaseCurrency = group.baseCurrency || 'EUR';
+				editGroupName = group.name;
+				editGroupDescription = group.description || '';
+				editGroupCurrency = group.baseCurrency || 'EUR';
+			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load group data';
 		} finally {
@@ -104,20 +135,35 @@
 	}
 
 	async function addExpense() {
-		if (!expenseDescription || !expenseAmount || (selectedMembers.length === 0 && selectedMockMembers.length === 0)) return;
+		if (!expenseDescription || !expenseAmount || selectedMembers.length === 0) return;
 
 		try {
+			const customSharesArray = !splitEvenly
+				? selectedMembers.map((memberId) => ({
+						memberId,
+						amount: Number.parseFloat(customShares[memberId] || '0'),
+					}))
+				: undefined;
+
 			await api.expenses.create({
 				groupId,
 				description: expenseDescription,
-				amount: parseFloat(expenseAmount),
+				note: expenseNote || undefined,
+				amount: Number.parseFloat(expenseAmount),
+				currency: expenseCurrency,
+				createdAt: expenseDate || undefined,
+				paidBy: expensePaidBy || undefined,
 				sharedWith: selectedMembers,
-				sharedWithMock: selectedMockMembers,
+				customShares: customSharesArray,
 			});
 			expenseDescription = '';
+			expenseNote = '';
 			expenseAmount = '';
+			expenseDate = '';
+			expensePaidBy = 0;
 			selectedMembers = [];
-			selectedMockMembers = [];
+			splitEvenly = true;
+			customShares = {};
 			showAddExpense = false;
 			loadGroupData();
 		} catch (e) {
@@ -126,25 +172,18 @@
 	}
 
 	async function settleDebt() {
-		if (!settleAmount) return;
-		if (!settleFromIsMock && !settleFromUser) return;
-		if (!settleToIsMock && !settleToUser) return;
+		if (!settleAmount || !settleFromMember || !settleToMember) return;
 
 		try {
 			await api.expenses.settle({
 				groupId,
-				fromUserId: settleFromIsMock ? undefined : settleFromUser,
-				toUserId: settleToIsMock ? undefined : settleToUser,
-				fromMockUserId: settleFromIsMock ? settleFromMockUser : undefined,
-				toMockUserId: settleToIsMock ? settleToMockUser : undefined,
-				amount: parseFloat(settleAmount),
+				fromMemberId: settleFromMember,
+				toMemberId: settleToMember,
+				amount: Number.parseFloat(settleAmount),
+				currency: settleCurrency,
 			});
-			settleFromUser = 0;
-			settleToUser = 0;
-			settleFromMockUser = 0;
-			settleToMockUser = 0;
-			settleFromIsMock = false;
-			settleToIsMock = false;
+			settleFromMember = 0;
+			settleToMember = 0;
 			settleAmount = '';
 			showSettleDebt = false;
 			loadGroupData();
@@ -153,53 +192,120 @@
 		}
 	}
 
-	async function addMockUser() {
-		if (!newMockUserName) return;
+	async function addGuestMember() {
+		if (!newGuestMemberName) return;
 
 		try {
-			await api.mockUsers.create({
-				groupId,
-				name: newMockUserName,
+			await api.members.create(groupId, {
+				name: newGuestMemberName,
 			});
-			newMockUserName = '';
-			showAddMockUser = false;
+			newGuestMemberName = '';
+			showAddGuestMember = false;
 			loadGroupData();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to add mock user';
+			error = e instanceof Error ? e.message : 'Failed to add guest member';
 		}
 	}
 
-	async function deleteMockUser(id: number) {
-		if (!confirm('Are you sure? This will remove all their expense shares and settlements.')) return;
+	async function inviteMember() {
+		if (!inviteEmail) return;
 
 		try {
-			await api.mockUsers.delete(id);
+			await api.groups.invite(groupId, inviteEmail);
+			inviteEmail = '';
+			showInviteMember = false;
+			error = '';
+			// Show success message
+			const successMsg = error;
+			error = '✓ Invitation sent successfully!';
+			setTimeout(() => {
+				if (error === '✓ Invitation sent successfully!') error = '';
+			}, 3000);
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to send invitation';
+		}
+	}
+
+	async function deleteGuestMember(memberId: number) {
+		if (!confirm('Are you sure? This will remove all their expense shares and settlements.'))
+			return;
+
+		try {
+			await api.members.delete(groupId, memberId);
 			loadGroupData();
 		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to delete mock user';
+			error = e instanceof Error ? e.message : 'Failed to delete guest member';
+		}
+	}
+
+	async function updateBaseCurrency() {
+		if (!newBaseCurrency) return;
+
+		try {
+			await api.groups.updateCurrency(groupId, newBaseCurrency);
+			showChangeCurrency = false;
+			loadGroupData();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to update base currency';
+		}
+	}
+
+	async function saveGroupSettings() {
+		if (!editGroupName) {
+			error = 'Group name is required';
+			return;
+		}
+
+		try {
+			await api.groups.update(groupId, {
+				name: editGroupName,
+				description: editGroupDescription || undefined,
+				baseCurrency: editGroupCurrency,
+			});
+			settingsSaved = true;
+			setTimeout(() => (settingsSaved = false), 3000);
+			loadGroupData();
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to update group settings';
 		}
 	}
 
 	function toggleMember(memberId: number) {
 		if (selectedMembers.includes(memberId)) {
 			selectedMembers = selectedMembers.filter((id) => id !== memberId);
+			delete customShares[memberId];
+			customShares = customShares;
 		} else {
 			selectedMembers = [...selectedMembers, memberId];
 		}
 	}
 
-	function toggleMockMember(mockUserId: number) {
-		if (selectedMockMembers.includes(mockUserId)) {
-			selectedMockMembers = selectedMockMembers.filter((id) => id !== mockUserId);
-		} else {
-			selectedMockMembers = [...selectedMockMembers, mockUserId];
-		}
+	function selectAllMembers() {
+		if (!allMembers) return;
+		selectedMembers = allMembers.map((m) => m.id);
 	}
 
-	function selectAllMembers() {
-		if (!group) return;
-		selectedMembers = group.members.map((m) => m.user.id);
-		selectedMockMembers = mockUsers.map((m) => m.id);
+	function getCustomSharesTotal(): number {
+		return selectedMembers.reduce((sum, memberId) => {
+			return sum + Number.parseFloat(customShares[memberId] || '0');
+		}, 0);
+	}
+
+	function getCustomSharesRemaining(): number {
+		const total = Number.parseFloat(expenseAmount || '0');
+		const allocated = getCustomSharesTotal();
+		return total - allocated;
+	}
+
+	function distributeEvenly() {
+		if (!expenseAmount || selectedMembers.length === 0) return;
+		const total = Number.parseFloat(expenseAmount);
+		const perPerson = total / selectedMembers.length;
+		customShares = {};
+		selectedMembers.forEach((memberId) => {
+			customShares[memberId] = perPerson.toFixed(2);
+		});
+		customShares = customShares;
 	}
 
 	function formatDate(date: Date) {
@@ -210,9 +316,9 @@
 		return amount.toFixed(2);
 	}
 
-	function getSettlementParticipant(fromUser: Member | null, fromMockUser: MockUser | null) {
-		if (fromUser) return fromUser.name;
-		if (fromMockUser) return `${fromMockUser.name} (guest)`;
+	function getMemberName(member: GroupMember) {
+		if (member.user && member.user.name) return member.user.name;
+		if (member.name) return `${member.name} (guest)`;
 		return 'Unknown';
 	}
 </script>
@@ -238,7 +344,9 @@
 					<p class="text-gray-400">{group.description}</p>
 				{/if}
 				<div class="mt-2 text-sm text-gray-400">
-					Group ID: {group.id} • {group.members.length} members • {mockUsers.length} guests
+					Group ID: {group.id} • {allMembers.length} members ({allMembers.filter(
+						(m) => m.userId === null
+					).length} guests)
 				</div>
 			</div>
 
@@ -251,7 +359,8 @@
 			<div class="flex gap-2 mb-4 overflow-x-auto">
 				<button
 					on:click={() => (activeTab = 'expenses')}
-					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'expenses'
+					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab ===
+					'expenses'
 						? 'bg-primary text-dark'
 						: 'bg-dark-300 text-gray-400'}"
 				>
@@ -259,7 +368,8 @@
 				</button>
 				<button
 					on:click={() => (activeTab = 'balances')}
-					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'balances'
+					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab ===
+					'balances'
 						? 'bg-primary text-dark'
 						: 'bg-dark-300 text-gray-400'}"
 				>
@@ -267,7 +377,8 @@
 				</button>
 				<button
 					on:click={() => (activeTab = 'settlements')}
-					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'settlements'
+					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab ===
+					'settlements'
 						? 'bg-primary text-dark'
 						: 'bg-dark-300 text-gray-400'}"
 				>
@@ -275,12 +386,24 @@
 				</button>
 				<button
 					on:click={() => (activeTab = 'members')}
-					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'members'
+					class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab ===
+					'members'
 						? 'bg-primary text-dark'
 						: 'bg-dark-300 text-gray-400'}"
 				>
 					Members
 				</button>
+				{#if group.createdBy === $user?.id}
+					<button
+						on:click={() => (activeTab = 'settings')}
+						class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab ===
+						'settings'
+							? 'bg-primary text-dark'
+							: 'bg-dark-300 text-gray-400'}"
+					>
+						Settings
+					</button>
+				{/if}
 			</div>
 
 			{#if activeTab === 'expenses'}
@@ -303,19 +426,32 @@
 							<div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
 								<div class="flex justify-between items-start mb-2">
 									<div class="flex-1">
-										<h3 class="text-lg font-semibold text-white">{expense.description}</h3>
-										<p class="text-sm text-gray-400">Paid by {expense.payer.name}</p>
+										<h3 class="text-lg font-semibold text-white">
+											{expense.description}
+										</h3>
+										{#if expense.note}
+											<p class="text-sm text-gray-300 mt-1 italic">
+												{expense.note}
+											</p>
+										{/if}
+										<p class="text-sm text-gray-400 mt-1">
+											Paid by {getMemberName(expense.payer)}
+										</p>
 									</div>
 									<div class="text-right">
-										<div class="text-xl font-bold text-primary">${formatCurrency(expense.amount)}</div>
-										<div class="text-xs text-gray-400">{formatDate(expense.createdAt)}</div>
+										<div class="text-xl font-bold text-primary">
+											{formatCurrency(expense.amount)}
+											{expense.currency || 'EUR'}
+										</div>
+										<div class="text-xs text-gray-400">
+											{formatDate(expense.createdAt)}
+										</div>
 									</div>
 								</div>
 								<div class="text-sm text-gray-400">
-									Split with: {[
-										...expense.shares.map((s) => s.user.name),
-										...expense.mockShares.map((s) => s.mockUser.name + ' (guest)')
-									].join(', ')}
+									Split with: {expense.shares
+										.map((s) => getMemberName(s.member))
+										.join(', ')}
 								</div>
 							</div>
 						{/each}
@@ -336,34 +472,72 @@
 				<div class="space-y-3">
 					{#each balances as balance}
 						<div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-							<div class="flex justify-between items-center">
-								<div>
-									<div class="font-semibold text-white">{balance.userName}</div>
-									{#if balance.isMock}
-										<div class="text-xs text-gray-500">Guest member</div>
+							<div class="flex justify-between items-start mb-2">
+								<div class="flex-1">
+									<div class="font-semibold text-white">{balance.memberName}</div>
+									{#if balance.isGuest}
+										<div class="text-xs text-gray-500 mb-2">Guest member</div>
+									{/if}
+
+									{#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
+										<div class="mt-2 space-y-1">
+											{#each balance.balanceByCurrency as currBal}
+												<div
+													class="text-sm font-medium {currBal.amount > 0
+														? 'text-green-400'
+														: currBal.amount < 0
+															? 'text-red-400'
+															: 'text-gray-400'}"
+												>
+													{currBal.amount > 0
+														? 'Owed: +'
+														: 'Owes: '}{formatCurrency(
+														Math.abs(currBal.amount)
+													)}
+													{currBal.currency}
+												</div>
+											{/each}
+											{#if balance.balanceByCurrency.length > 1}
+												<div
+													class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100"
+												>
+													Total in {group?.baseCurrency || 'EUR'}: {balance.balance >
+													0
+														? '+'
+														: ''}{formatCurrency(
+														Math.abs(balance.balance)
+													)}
+												</div>
+											{/if}
+										</div>
 									{/if}
 								</div>
-								<div
-									class="text-lg font-bold {balance.balance > 0
-										? 'text-green-400'
-										: balance.balance < 0
-											? 'text-red-400'
-											: 'text-gray-400'}"
-								>
-									{#if balance.balance > 0}
-										+${formatCurrency(balance.balance)}
-									{:else if balance.balance < 0}
-										-${formatCurrency(Math.abs(balance.balance))}
-									{:else}
-										Settled
-									{/if}
+								<div class="text-right">
+									<div
+										class="text-xl font-bold {balance.balance > 0
+											? 'text-green-400'
+											: balance.balance < 0
+												? 'text-red-400'
+												: 'text-gray-400'}"
+									>
+										{#if balance.balance > 0}
+											+{formatCurrency(balance.balance)}
+										{:else if balance.balance < 0}
+											-{formatCurrency(Math.abs(balance.balance))}
+										{:else}
+											Settled
+										{/if}
+									</div>
+									<div class="text-xs text-gray-500 mt-1">
+										{group?.baseCurrency || 'EUR'}
+									</div>
 								</div>
 							</div>
-							<div class="text-sm text-gray-400 mt-1">
+							<div class="text-sm text-gray-400 border-t border-dark-100 pt-2">
 								{#if balance.balance > 0}
-									Is owed
+									Is owed in total
 								{:else if balance.balance < 0}
-									Owes
+									Owes in total
 								{:else}
 									All settled up
 								{/if}
@@ -385,13 +559,22 @@
 								<div class="flex justify-between items-start">
 									<div>
 										<div class="text-white">
-											<span class="font-semibold">{getSettlementParticipant(settlement.fromUser, settlement.fromMockUser)}</span>
+											<span class="font-semibold"
+												>{getMemberName(settlement.fromMember)}</span
+											>
 											<span class="text-gray-400"> paid </span>
-											<span class="font-semibold">{getSettlementParticipant(settlement.toUser, settlement.toMockUser)}</span>
+											<span class="font-semibold"
+												>{getMemberName(settlement.toMember)}</span
+											>
 										</div>
-										<div class="text-xs text-gray-400 mt-1">{formatDate(settlement.createdAt)}</div>
+										<div class="text-xs text-gray-400 mt-1">
+											{formatDate(settlement.createdAt)}
+										</div>
 									</div>
-									<div class="text-lg font-bold text-primary">${formatCurrency(settlement.amount)}</div>
+									<div class="text-lg font-bold text-primary">
+										{formatCurrency(settlement.amount)}
+										{settlement.currency || 'EUR'}
+									</div>
 								</div>
 							</div>
 						{/each}
@@ -400,10 +583,16 @@
 			{/if}
 
 			{#if activeTab === 'members'}
-				<div class="mb-4">
+				<div class="mb-4 flex gap-2">
 					<button
-						on:click={() => (showAddMockUser = true)}
-						class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+						on:click={() => (showInviteMember = true)}
+						class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+					>
+						Invite Member
+					</button>
+					<button
+						on:click={() => (showAddGuestMember = true)}
+						class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary"
 					>
 						Add Guest Member
 					</button>
@@ -411,46 +600,125 @@
 
 				<div class="space-y-4">
 					<div>
-						<h3 class="text-lg font-semibold text-white mb-3">Registered Members</h3>
+						<h3 class="text-lg font-semibold text-white mb-3">All Members</h3>
 						<div class="space-y-2">
-							{#each group.members as member}
+							{#each allMembers as member}
 								<div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
 									<div class="flex justify-between items-center">
 										<div>
-											<div class="font-semibold text-white">{member.user.name}</div>
-											<div class="text-sm text-gray-400">{member.user.email}</div>
+											<div class="font-semibold text-white">
+												{getMemberName(member)}
+											</div>
+											{#if member.user}
+												<div class="text-sm text-gray-400">
+													{member.user.email}
+												</div>
+											{:else}
+												<div class="text-sm text-gray-400">
+													No account required
+												</div>
+											{/if}
 										</div>
-										<div class="text-xs text-primary">Registered</div>
+										{#if member.userId !== null}
+											<div class="text-xs text-primary">Registered</div>
+										{:else}
+											<button
+												on:click={() => deleteGuestMember(member.id)}
+												class="text-red-400 hover:text-red-300 text-sm"
+											>
+												Remove
+											</button>
+										{/if}
 									</div>
 								</div>
 							{/each}
 						</div>
 					</div>
-
-					{#if mockUsers.length > 0}
-						<div>
-							<h3 class="text-lg font-semibold text-white mb-3">Guest Members</h3>
-							<div class="space-y-2">
-								{#each mockUsers as mockUser}
-									<div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-										<div class="flex justify-between items-center">
-											<div>
-												<div class="font-semibold text-white">{mockUser.name}</div>
-												<div class="text-sm text-gray-400">No account required</div>
-											</div>
-											<button
-												on:click={() => deleteMockUser(mockUser.id)}
-												class="text-red-400 hover:text-red-300 text-sm"
-											>
-												Remove
-											</button>
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
 				</div>
+			{/if}
+
+			{#if activeTab === 'settings'}
+				{#if group.createdBy === $user?.id}
+					<div class="bg-dark-300 p-6 rounded-lg border border-dark-100">
+						<h3 class="text-2xl font-bold text-white mb-6">Group Settings</h3>
+
+						{#if settingsSaved}
+							<div
+								class="bg-green-900/50 border border-green-500 text-green-200 p-3 rounded mb-4"
+							>
+								Settings saved successfully!
+							</div>
+						{/if}
+
+						<form on:submit|preventDefault={saveGroupSettings} class="space-y-6">
+							<div>
+								<label
+									for="settingsGroupName"
+									class="block text-sm font-medium text-gray-300 mb-2"
+								>
+									Group Name
+								</label>
+								<input
+									type="text"
+									id="settingsGroupName"
+									bind:value={editGroupName}
+									required
+									class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+									placeholder="e.g., Roommates, Trip to Paris"
+								/>
+							</div>
+
+							<div>
+								<label
+									for="settingsGroupDescription"
+									class="block text-sm font-medium text-gray-300 mb-2"
+								>
+									Description
+								</label>
+								<textarea
+									id="settingsGroupDescription"
+									bind:value={editGroupDescription}
+									rows="3"
+									class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+									placeholder="What is this group for?"
+								></textarea>
+							</div>
+
+							<div>
+								<label
+									for="settingsBaseCurrency"
+									class="block text-sm font-medium text-gray-300 mb-2"
+								>
+									Base Currency
+								</label>
+								<select
+									id="settingsBaseCurrency"
+									bind:value={editGroupCurrency}
+									class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+								>
+									{#each supportedCurrencies as curr}
+										<option value={curr}>{curr}</option>
+									{/each}
+								</select>
+								<p class="text-xs text-gray-400 mt-1">
+									The base currency is used to display total balances when
+									multiple currencies are used.
+								</p>
+							</div>
+
+							<button
+								type="submit"
+								class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+							>
+								Save Settings
+							</button>
+						</form>
+					</div>
+				{:else}
+					<div class="text-center py-12 bg-dark-300 rounded-lg">
+						<p class="text-gray-400">Only the group creator can modify settings.</p>
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
@@ -458,7 +726,9 @@
 
 {#if showAddExpense && group}
 	<div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-		<div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+		<div
+			class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto"
+		>
 			<h3 class="text-2xl font-bold text-white mb-4">Add Expense</h3>
 			<form on:submit|preventDefault={addExpense} class="space-y-4">
 				<div>
@@ -473,6 +743,18 @@
 						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
 						placeholder="e.g., Dinner, Groceries"
 					/>
+				</div>
+				<div>
+					<label for="note" class="block text-sm font-medium text-gray-300 mb-2">
+						Note (optional)
+					</label>
+					<textarea
+						id="note"
+						bind:value={expenseNote}
+						rows="2"
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+						placeholder="Add any additional context or details..."
+					></textarea>
 				</div>
 				<div>
 					<label for="amount" class="block text-sm font-medium text-gray-300 mb-2">
@@ -490,10 +772,53 @@
 					/>
 				</div>
 				<div>
+					<label for="currency" class="block text-sm font-medium text-gray-300 mb-2">
+						Currency
+					</label>
+					<select
+						id="currency"
+						bind:value={expenseCurrency}
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+					>
+						{#each supportedCurrencies as curr}
+							<option value={curr}>{curr}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="expenseDate" class="block text-sm font-medium text-gray-300 mb-2">
+						Date (optional)
+					</label>
+					<input
+						type="date"
+						id="expenseDate"
+						bind:value={expenseDate}
+						max={new Date().toISOString().split('T')[0]}
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+					/>
+					<p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
+				</div>
+				<div>
+					<label for="paidBy" class="block text-sm font-medium text-gray-300 mb-2">
+						Paid by
+					</label>
+					<select
+						id="paidBy"
+						bind:value={expensePaidBy}
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+					>
+						<option value={0}>Me ({$user?.name})</option>
+						{#each allMembers as member}
+							{#if member.userId && member.userId !== $user?.id}
+								<option value={member.id}>{getMemberName(member)}</option>
+							{/if}
+						{/each}
+					</select>
+					<p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
+				</div>
+				<div>
 					<div class="flex justify-between items-center mb-2">
-						<label class="block text-sm font-medium text-gray-300">
-							Split with
-						</label>
+						<label class="block text-sm font-medium text-gray-300"> Split with </label>
 						<button
 							type="button"
 							on:click={selectAllMembers}
@@ -503,40 +828,87 @@
 						</button>
 					</div>
 					<div class="space-y-2 max-h-48 overflow-y-auto">
-						{#each group.members as member}
-							<label class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer">
+						{#each allMembers as member}
+							<label
+								class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer"
+							>
 								<input
 									type="checkbox"
-									checked={selectedMembers.includes(member.user.id)}
-									on:change={() => toggleMember(member.user.id)}
+									checked={selectedMembers.includes(member.id)}
+									on:change={() => toggleMember(member.id)}
 									class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
 								/>
-								<span class="text-white">{member.user.name}</span>
+								<span class="text-white">{getMemberName(member)}</span>
 							</label>
 						{/each}
-						{#if mockUsers.length > 0}
-							<div class="border-t border-dark-100 pt-2 mt-2">
-								<p class="text-xs text-gray-400 mb-2">Guest Members</p>
-								{#each mockUsers as mockUser}
-									<label class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer">
-										<input
-											type="checkbox"
-											checked={selectedMockMembers.includes(mockUser.id)}
-											on:change={() => toggleMockMember(mockUser.id)}
-											class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
-										/>
-										<span class="text-gray-300">{mockUser.name}</span>
-									</label>
-								{/each}
-							</div>
-						{/if}
 					</div>
-					{#if selectedMembers.length > 0 || selectedMockMembers.length > 0}
-						<p class="text-xs text-gray-400 mt-2">
-							{selectedMembers.length + selectedMockMembers.length} member(s) selected • ${formatCurrency(
-								parseFloat(expenseAmount || '0') / (selectedMembers.length + selectedMockMembers.length)
-							)} each
-						</p>
+					{#if selectedMembers.length > 0}
+						<div class="mt-3 p-3 bg-dark-200 rounded-lg">
+							<label class="flex items-center space-x-2 mb-3">
+								<input
+									type="checkbox"
+									bind:checked={splitEvenly}
+									class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
+								/>
+								<span class="text-sm text-gray-300">Split evenly</span>
+							</label>
+							{#if splitEvenly}
+								<p class="text-xs text-gray-400">
+									{selectedMembers.length} member(s) selected • ${formatCurrency(
+										parseFloat(expenseAmount || '0') / selectedMembers.length
+									)} each
+								</p>
+							{:else}
+								<div class="space-y-2 mb-2">
+									<div class="flex justify-between items-center">
+										<span class="text-xs font-medium text-gray-300"
+											>Custom amounts</span
+										>
+										<button
+											type="button"
+											on:click={distributeEvenly}
+											class="text-xs text-primary hover:text-primary-400"
+										>
+											Auto-fill evenly
+										</button>
+									</div>
+									{#each selectedMembers as memberId}
+										{@const member = allMembers.find((m) => m.id === memberId)}
+										{#if member}
+											<div class="flex items-center space-x-2">
+												<span class="text-xs text-gray-400 flex-1"
+													>{getMemberName(member)}</span
+												>
+												<input
+													type="number"
+													bind:value={customShares[memberId]}
+													step="0.01"
+													min="0"
+													placeholder="0.00"
+													class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+												/>
+											</div>
+										{/if}
+									{/each}
+								</div>
+								<div class="text-xs space-y-1">
+									<div class="flex justify-between text-gray-400">
+										<span>Total allocated:</span>
+										<span>${formatCurrency(getCustomSharesTotal())}</span>
+									</div>
+									<div
+										class="flex justify-between {Math.abs(
+											getCustomSharesRemaining()
+										) < 0.01
+											? 'text-green-400'
+											: 'text-red-400'}"
+									>
+										<span>Remaining:</span>
+										<span>${formatCurrency(getCustomSharesRemaining())}</span>
+									</div>
+								</div>
+							{/if}
+						</div>
 					{/if}
 				</div>
 				<div class="flex gap-2">
@@ -565,75 +937,35 @@
 			<h3 class="text-2xl font-bold text-white mb-4">Settle Debt</h3>
 			<form on:submit|preventDefault={settleDebt} class="space-y-4">
 				<div>
-					<label for="fromUser" class="block text-sm font-medium text-gray-300 mb-2">
+					<label for="fromMember" class="block text-sm font-medium text-gray-300 mb-2">
 						From (who paid)
 					</label>
 					<select
-						id="fromUser"
-						on:change={(e) => {
-							const value = e.currentTarget.value;
-							if (value.startsWith('mock-')) {
-								settleFromIsMock = true;
-								settleFromMockUser = parseInt(value.replace('mock-', ''));
-								settleFromUser = 0;
-							} else {
-								settleFromIsMock = false;
-								settleFromUser = parseInt(value);
-								settleFromMockUser = 0;
-							}
-						}}
+						id="fromMember"
+						bind:value={settleFromMember}
 						required
 						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
 					>
-						<option value="">Select person</option>
-						<optgroup label="Registered Members">
-							{#each group.members as member}
-								<option value={member.user.id}>{member.user.name}</option>
-							{/each}
-						</optgroup>
-						{#if mockUsers.length > 0}
-							<optgroup label="Guest Members">
-								{#each mockUsers as mockUser}
-									<option value="mock-{mockUser.id}">{mockUser.name}</option>
-								{/each}
-							</optgroup>
-						{/if}
+						<option value={0}>Select person</option>
+						{#each allMembers as member}
+							<option value={member.id}>{getMemberName(member)}</option>
+						{/each}
 					</select>
 				</div>
 				<div>
-					<label for="toUser" class="block text-sm font-medium text-gray-300 mb-2">
+					<label for="toMember" class="block text-sm font-medium text-gray-300 mb-2">
 						To (who received)
 					</label>
 					<select
-						id="toUser"
-						on:change={(e) => {
-							const value = e.currentTarget.value;
-							if (value.startsWith('mock-')) {
-								settleToIsMock = true;
-								settleToMockUser = parseInt(value.replace('mock-', ''));
-								settleToUser = 0;
-							} else {
-								settleToIsMock = false;
-								settleToUser = parseInt(value);
-								settleToMockUser = 0;
-							}
-						}}
+						id="toMember"
+						bind:value={settleToMember}
 						required
 						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
 					>
-						<option value="">Select person</option>
-						<optgroup label="Registered Members">
-							{#each group.members as member}
-								<option value={member.user.id}>{member.user.name}</option>
-							{/each}
-						</optgroup>
-						{#if mockUsers.length > 0}
-							<optgroup label="Guest Members">
-								{#each mockUsers as mockUser}
-									<option value="mock-{mockUser.id}">{mockUser.name}</option>
-								{/each}
-							</optgroup>
-						{/if}
+						<option value={0}>Select person</option>
+						{#each allMembers as member}
+							<option value={member.id}>{getMemberName(member)}</option>
+						{/each}
 					</select>
 				</div>
 				<div>
@@ -650,6 +982,23 @@
 						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
 						placeholder="0.00"
 					/>
+				</div>
+				<div>
+					<label
+						for="settleCurrency"
+						class="block text-sm font-medium text-gray-300 mb-2"
+					>
+						Currency
+					</label>
+					<select
+						id="settleCurrency"
+						bind:value={settleCurrency}
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+					>
+						{#each supportedCurrencies as curr}
+							<option value={curr}>{curr}</option>
+						{/each}
+					</select>
 				</div>
 				<div class="flex gap-2">
 					<button
@@ -671,27 +1020,33 @@
 	</div>
 {/if}
 
-{#if showAddMockUser && group}
+{#if showAddGuestMember && group}
 	<div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
 		<div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
 			<h3 class="text-2xl font-bold text-white mb-4">Add Guest Member</h3>
 			<p class="text-sm text-gray-400 mb-4">
-				Guest members don't need an account. Perfect for visitors or people who don't want to register.
+				Guest members don't need an account. Perfect for visitors or people who don't want
+				to register.
 			</p>
-			<form on:submit|preventDefault={addMockUser} class="space-y-4">
+			<form on:submit|preventDefault={addGuestMember} class="space-y-4">
 				<div>
-					<label for="mockUserName" class="block text-sm font-medium text-gray-300 mb-2">
+					<label
+						for="guestMemberName"
+						class="block text-sm font-medium text-gray-300 mb-2"
+					>
 						Name
 					</label>
 					<input
 						type="text"
-						id="mockUserName"
-						bind:value={newMockUserName}
+						id="guestMemberName"
+						bind:value={newGuestMemberName}
 						required
 						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
 						placeholder="e.g., John (visiting)"
 					/>
-					<p class="text-xs text-gray-400 mt-1">Add a note like "(guest)" or "(visiting)" to remember who they are</p>
+					<p class="text-xs text-gray-400 mt-1">
+						Add a note like "(guest)" or "(visiting)" to remember who they are
+					</p>
 				</div>
 				<div class="flex gap-2">
 					<button
@@ -702,7 +1057,92 @@
 					</button>
 					<button
 						type="button"
-						on:click={() => (showAddMockUser = false)}
+						on:click={() => (showAddGuestMember = false)}
+						class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+					>
+						Cancel
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
+
+{#if showChangeCurrency && group}
+	<div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+		<div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
+			<h3 class="text-2xl font-bold text-white mb-4">Change Base Currency</h3>
+			<p class="text-sm text-gray-400 mb-4">
+				The base currency is used to display total balances when multiple currencies are
+				used in the group.
+			</p>
+			<form on:submit|preventDefault={updateBaseCurrency} class="space-y-4">
+				<div>
+					<label for="baseCurrency" class="block text-sm font-medium text-gray-300 mb-2">
+						Base Currency
+					</label>
+					<select
+						id="baseCurrency"
+						bind:value={newBaseCurrency}
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+					>
+						{#each supportedCurrencies as curr}
+							<option value={curr}>{curr}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="flex gap-2">
+					<button
+						type="submit"
+						class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+					>
+						Update
+					</button>
+					<button
+						type="button"
+						on:click={() => (showChangeCurrency = false)}
+						class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+					>
+						Cancel
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
+
+{#if showInviteMember && group}
+	<div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+		<div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
+			<h3 class="text-2xl font-bold text-white mb-4">Invite Member</h3>
+			<p class="text-sm text-gray-400 mb-4">
+				Invite a user by their email address. They will receive a notification and can
+				accept or decline the invitation.
+			</p>
+			<form on:submit|preventDefault={inviteMember} class="space-y-4">
+				<div>
+					<label for="inviteEmail" class="block text-sm font-medium text-gray-300 mb-2">
+						Email Address
+					</label>
+					<input
+						type="email"
+						id="inviteEmail"
+						bind:value={inviteEmail}
+						required
+						class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+						placeholder="user@example.com"
+					/>
+				</div>
+				<div class="flex gap-2">
+					<button
+						type="submit"
+						class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+					>
+						Send Invitation
+					</button>
+					<button
+						type="button"
+						on:click={() => (showInviteMember = false)}
 						class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
 					>
 						Cancel

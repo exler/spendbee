@@ -43,13 +43,41 @@ export const api = {
 	groups: {
 		list: () => fetchAPI('/groups'),
 		get: (id: number) => fetchAPI(`/groups/${id}`),
-		create: (data: { name: string; description?: string }) =>
+		create: (data: { name: string; description?: string; baseCurrency?: string }) =>
 			fetchAPI('/groups', {
 				method: 'POST',
 				body: JSON.stringify(data),
 			}),
-		join: (id: number) =>
-			fetchAPI(`/groups/${id}/join`, {
+		update: (id: number, data: { name?: string; description?: string; baseCurrency?: string }) =>
+			fetchAPI(`/groups/${id}`, {
+				method: 'PATCH',
+				body: JSON.stringify(data),
+			}),
+		invite: (id: number, email: string) =>
+			fetchAPI(`/groups/${id}/invite`, {
+				method: 'POST',
+				body: JSON.stringify({ email }),
+			}),
+		updateCurrency: (id: number, baseCurrency: string) =>
+			fetchAPI(`/groups/${id}/currency`, {
+				method: 'PATCH',
+				body: JSON.stringify({ baseCurrency }),
+			}),
+		currencies: () => fetchAPI('/groups/currencies'),
+	},
+	notifications: {
+		list: () => fetchAPI('/notifications'),
+		unreadCount: () => fetchAPI('/notifications/unread-count'),
+		markAsRead: (id: number) =>
+			fetchAPI(`/notifications/${id}/read`, {
+				method: 'PATCH',
+			}),
+		accept: (id: number) =>
+			fetchAPI(`/notifications/${id}/accept`, {
+				method: 'POST',
+			}),
+		decline: (id: number) =>
+			fetchAPI(`/notifications/${id}/decline`, {
 				method: 'POST',
 			}),
 	},
@@ -57,9 +85,13 @@ export const api = {
 		create: (data: {
 			groupId: number;
 			description: string;
+			note?: string;
 			amount: number;
+			currency?: string;
+			createdAt?: string;
+			paidBy?: number;
 			sharedWith: number[];
-			sharedWithMock: number[];
+			customShares?: Array<{ memberId: number; amount: number }>;
 		}) =>
 			fetchAPI('/expenses', {
 				method: 'POST',
@@ -69,11 +101,10 @@ export const api = {
 		balances: (groupId: number) => fetchAPI(`/expenses/group/${groupId}/balances`),
 		settle: (data: {
 			groupId: number;
-			fromUserId?: number;
-			toUserId?: number;
-			fromMockUserId?: number;
-			toMockUserId?: number;
+			fromMemberId: number;
+			toMemberId: number;
 			amount: number;
+			currency?: string;
 		}) =>
 			fetchAPI('/expenses/settle', {
 				method: 'POST',
@@ -81,15 +112,15 @@ export const api = {
 			}),
 		settlements: (groupId: number) => fetchAPI(`/expenses/group/${groupId}/settlements`),
 	},
-	mockUsers: {
-		create: (data: { groupId: number; name: string }) =>
-			fetchAPI('/mock-users', {
+	members: {
+		create: (groupId: number, data: { name: string }) =>
+			fetchAPI(`/groups/${groupId}/members`, {
 				method: 'POST',
 				body: JSON.stringify(data),
 			}),
-		list: (groupId: number) => fetchAPI(`/mock-users/group/${groupId}`),
-		delete: (id: number) =>
-			fetchAPI(`/mock-users/${id}`, {
+		list: (groupId: number) => fetchAPI(`/groups/${groupId}/members`),
+		delete: (groupId: number, memberId: number) =>
+			fetchAPI(`/groups/${groupId}/members/${memberId}`, {
 				method: 'DELETE',
 			}),
 	},

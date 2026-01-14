@@ -29,7 +29,9 @@
 	<title>Login - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300">
+<div
+	class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300"
+>
 	<div class="w-full max-w-md">
 		<div class="text-center mb-8">
 			<a href="/" class="inline-block">
@@ -38,7 +40,10 @@
 			<h2 class="text-2xl font-semibold text-white mt-4">Login</h2>
 		</div>
 
-		<form on:submit|preventDefault={handleLogin} class="bg-dark-300 p-6 rounded-lg shadow-lg space-y-4">
+		<form
+			on:submit|preventDefault={handleLogin}
+			class="bg-dark-300 p-6 rounded-lg shadow-lg space-y-4"
+		>
 			{#if error}
 				<div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded">
 					{error}

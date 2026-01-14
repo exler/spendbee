@@ -14,7 +14,9 @@
 	<title>Spendbee - Split bills with friends</title>
 </svelte:head>
 
-<div class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300">
+<div
+	class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300"
+>
 	<div class="text-center max-w-md w-full">
 		<div class="mb-8">
 			<h1 class="text-6xl font-bold text-primary mb-2">🐝</h1>

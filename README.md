@@ -16,7 +16,11 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - ✅ User registration and authentication with JWT
 - ✅ Create and join expense groups
 - ✅ Add expenses and split with selected members
+- ✅ **Select who paid** - Choose any group member as the payer (defaults to you)
+- ✅ **Custom expense dates** - Record past expenses with their actual date
+- ✅ **Multi-currency support** - Track expenses in 30+ currencies with ECB exchange rates
 - ✅ **Mock users (guests)** - Add people without system accounts
+- ✅ **Group settings** - Group creators can modify name, description, and base currency
 - ✅ Real-time balance calculation
 - ✅ Record debt settlements
 - ✅ View expense history and settlement history
@@ -85,11 +89,13 @@ spendbee/
 ## Database Schema
 
 - **users** - User accounts (email, password, name)
-- **groups** - Expense groups
+- **groups** - Expense groups (with base currency)
 - **group_members** - Group membership associations
-- **expenses** - Recorded expenses with payer
+- **expenses** - Recorded expenses with payer (with currency)
 - **expense_shares** - How expenses are split among users
-- **settlements** - Debt payments between users
+- **expense_shares_mock** - Expense shares for mock/guest users
+- **mock_users** - Guest members without system accounts
+- **settlements** - Debt payments between users (with currency)
 
 ## API Endpoints
 
@@ -101,7 +107,9 @@ spendbee/
 - `GET /groups` - List user's groups
 - `POST /groups` - Create new group
 - `GET /groups/:id` - Get group details
+- `PATCH /groups/:id` - Update group settings (name, description, base currency)
 - `POST /groups/:id/join` - Join existing group
+- `GET /groups/currencies` - Get list of supported currencies
 
 ### Expenses
 - `POST /expenses` - Create new expense

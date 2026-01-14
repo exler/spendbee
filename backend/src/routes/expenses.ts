@@ -1,382 +1,383 @@
+import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { expenses, expenseShares, expenseSharesMock, groupMembers, settlements, mockUsers } from "../db/schema";
-import { eq, and, sql, or } from "drizzle-orm";
-import type { Balance } from "../types";
+import { expenseShares, expenses, groupMembers, groups, settlements } from "../db/schema";
+import { convertCurrency, getExchangeRates } from "../services/currency";
+import type { Balance, CurrencyBalance } from "../types";
 
 export const expenseRoutes = new Elysia({ prefix: "/expenses" })
-  .derive(async ({ headers, set }) => {
-    const authHeader = headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      set.status = 401;
-      throw new Error("Unauthorized");
-    }
+    .derive(async ({ headers, set }) => {
+        const authHeader = headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            set.status = 401;
+            throw new Error("Unauthorized");
+        }
 
-    const token = authHeader.substring(7);
-    
-    try {
-      const jwt = await import("@elysiajs/jwt").then(m => m.jwt({
-        name: "jwt",
-        secret: process.env.JWT_SECRET || "spendbee-secret-key-change-in-production",
-      }));
-      
-      const payload = await jwt.decorator.jwt.verify(token) as { userId: number };
-      
-      if (!payload || !payload.userId) {
-        set.status = 401;
-        throw new Error("Invalid token");
-      }
+        const token = authHeader.substring(7);
 
-      return { userId: payload.userId };
-    } catch {
-      set.status = 401;
-      throw new Error("Invalid token");
-    }
-  })
-  .post(
-    "/",
-    async ({ body, userId, set }) => {
-      try {
+        try {
+            const jwt = await import("@elysiajs/jwt").then((m) =>
+                m.jwt({
+                    name: "jwt",
+                    secret: process.env.JWT_SECRET || "spendbee-secret-key-change-in-production",
+                }),
+            );
+
+            const payload = (await jwt.decorator.jwt.verify(token)) as { userId: number };
+
+            if (!payload || !payload.userId) {
+                set.status = 401;
+                throw new Error("Invalid token");
+            }
+
+            return { userId: payload.userId };
+        } catch {
+            set.status = 401;
+            throw new Error("Invalid token");
+        }
+    })
+    .post(
+        "/",
+        async ({ body, userId, set }) => {
+            try {
+                const membership = await db.query.groupMembers.findFirst({
+                    where: and(eq(groupMembers.groupId, body.groupId), eq(groupMembers.userId, userId)),
+                });
+
+                if (!membership) {
+                    set.status = 403;
+                    return { error: "Not a member of this group" };
+                }
+
+                // Validate custom date if provided
+                if (body.createdAt) {
+                    const expenseDate = new Date(body.createdAt);
+                    const now = new Date();
+
+                    if (expenseDate > now) {
+                        set.status = 400;
+                        return { error: "Expense date cannot be in the future" };
+                    }
+                }
+
+                // Determine who paid (defaults to current user)
+                const paidBy = body.paidBy || userId;
+
+                // Validate that the payer is a member of the group (if not current user)
+                if (paidBy !== userId) {
+                    const payerMembership = await db.query.groupMembers.findFirst({
+                        where: and(eq(groupMembers.groupId, body.groupId), eq(groupMembers.userId, paidBy)),
+                    });
+
+                    if (!payerMembership) {
+                        set.status = 400;
+                        return { error: "Selected payer is not a member of this group" };
+                    }
+                }
+
+                const [expense] = await db
+                    .insert(expenses)
+                    .values({
+                        groupId: body.groupId,
+                        description: body.description,
+                        note: body.note || null,
+                        amount: body.amount,
+                        currency: body.currency || "EUR",
+                        paidBy: paidBy,
+                        createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+                    })
+                    .returning();
+
+                if (body.customShares && body.customShares.length > 0) {
+                    const totalCustom = body.customShares.reduce((sum, share) => sum + share.amount, 0);
+                    if (Math.abs(totalCustom - body.amount) > 0.01) {
+                        set.status = 400;
+                        return { error: "Custom shares must add up to the total amount" };
+                    }
+
+                    for (const share of body.customShares) {
+                        await db.insert(expenseShares).values({
+                            expenseId: expense.id,
+                            memberId: share.memberId,
+                            share: share.amount,
+                        });
+                    }
+                } else {
+                    const totalShares = body.sharedWith.length;
+                    const shareAmount = body.amount / totalShares;
+
+                    for (const memberId of body.sharedWith) {
+                        await db.insert(expenseShares).values({
+                            expenseId: expense.id,
+                            memberId: memberId,
+                            share: shareAmount,
+                        });
+                    }
+                }
+
+                return expense;
+            } catch (error) {
+                console.error(error);
+                set.status = 500;
+                return { error: "Failed to create expense" };
+            }
+        },
+        {
+            body: t.Object({
+                groupId: t.Number(),
+                description: t.String({ minLength: 1 }),
+                note: t.Optional(t.String()),
+                amount: t.Number({ minimum: 0.01 }),
+                currency: t.Optional(t.String()),
+                createdAt: t.Optional(t.String()),
+                paidBy: t.Optional(t.Number()),
+                sharedWith: t.Array(t.Number()),
+                customShares: t.Optional(
+                    t.Array(
+                        t.Object({
+                            memberId: t.Number(),
+                            amount: t.Number({ minimum: 0.01 }),
+                        }),
+                    ),
+                ),
+            }),
+        },
+    )
+    .get("/group/:groupId", async ({ params, userId, set }) => {
+        const groupId = parseInt(params.groupId);
+
         const membership = await db.query.groupMembers.findFirst({
-          where: and(
-            eq(groupMembers.groupId, body.groupId),
-            eq(groupMembers.userId, userId)
-          ),
+            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
         });
 
         if (!membership) {
-          set.status = 403;
-          return { error: "Not a member of this group" };
+            set.status = 403;
+            return { error: "Not a member of this group" };
         }
 
-        const [expense] = await db
-          .insert(expenses)
-          .values({
-            groupId: body.groupId,
-            description: body.description,
-            amount: body.amount,
-            paidBy: userId,
-          })
-          .returning();
-
-        const totalShares = body.sharedWith.length + body.sharedWithMock.length;
-        const shareAmount = body.amount / totalShares;
-
-        for (const memberId of body.sharedWith) {
-          await db.insert(expenseShares).values({
-            expenseId: expense.id,
-            userId: memberId,
-            share: shareAmount,
-          });
-        }
-
-        for (const mockUserId of body.sharedWithMock) {
-          await db.insert(expenseSharesMock).values({
-            expenseId: expense.id,
-            mockUserId: mockUserId,
-            share: shareAmount,
-          });
-        }
-
-        return expense;
-      } catch (error) {
-        set.status = 500;
-        return { error: "Failed to create expense" };
-      }
-    },
-    {
-      body: t.Object({
-        groupId: t.Number(),
-        description: t.String({ minLength: 1 }),
-        amount: t.Number({ minimum: 0.01 }),
-        sharedWith: t.Array(t.Number()),
-        sharedWithMock: t.Array(t.Number()),
-      }),
-    }
-  )
-  .get("/group/:groupId", async ({ params, userId, set }) => {
-    const groupId = parseInt(params.groupId);
-
-    const membership = await db.query.groupMembers.findFirst({
-      where: and(
-        eq(groupMembers.groupId, groupId),
-        eq(groupMembers.userId, userId)
-      ),
-    });
-
-    if (!membership) {
-      set.status = 403;
-      return { error: "Not a member of this group" };
-    }
-
-    const groupExpenses = await db.query.expenses.findMany({
-      where: eq(expenses.groupId, groupId),
-      with: {
-        payer: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        shares: {
-          with: {
-            user: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
+        const groupExpenses = await db.query.expenses.findMany({
+            where: eq(expenses.groupId, groupId),
+            with: {
+                payer: {
+                    with: {
+                        user: {
+                            columns: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+                shares: {
+                    with: {
+                        member: {
+                            with: {
+                                user: {
+                                    columns: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
-          },
-        },
-        mockShares: {
-          with: {
-            mockUser: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: (expenses, { desc }) => [desc(expenses.createdAt)],
-    });
+            orderBy: (expenses, { desc }) => [desc(expenses.createdAt)],
+        });
 
-    return groupExpenses;
-  })
-  .get("/group/:groupId/balances", async ({ params, userId, set }) => {
-    const groupId = parseInt(params.groupId);
+        return groupExpenses;
+    })
+    .get("/group/:groupId/balances", async ({ params, userId, set }) => {
+        const groupId = parseInt(params.groupId);
 
-    const membership = await db.query.groupMembers.findFirst({
-      where: and(
-        eq(groupMembers.groupId, groupId),
-        eq(groupMembers.userId, userId)
-      ),
-    });
-
-    if (!membership) {
-      set.status = 403;
-      return { error: "Not a member of this group" };
-    }
-
-    const members = await db.query.groupMembers.findMany({
-      where: eq(groupMembers.groupId, groupId),
-      with: {
-        user: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    const groupMockUsers = await db.query.mockUsers.findMany({
-      where: eq(mockUsers.groupId, groupId),
-    });
-
-    const balances: Balance[] = [];
-
-    for (const member of members) {
-      const paid = await db
-        .select({ total: sql<number>`COALESCE(SUM(${expenses.amount}), 0)` })
-        .from(expenses)
-        .where(
-          and(
-            eq(expenses.groupId, groupId),
-            eq(expenses.paidBy, member.userId)
-          )
-        );
-
-      const owed = await db
-        .select({ total: sql<number>`COALESCE(SUM(${expenseShares.share}), 0)` })
-        .from(expenseShares)
-        .innerJoin(expenses, eq(expenseShares.expenseId, expenses.id))
-        .where(
-          and(
-            eq(expenses.groupId, groupId),
-            eq(expenseShares.userId, member.userId)
-          )
-        );
-
-      const settledFrom = await db
-        .select({ total: sql<number>`COALESCE(SUM(${settlements.amount}), 0)` })
-        .from(settlements)
-        .where(
-          and(
-            eq(settlements.groupId, groupId),
-            eq(settlements.fromUserId, member.userId),
-            sql`${settlements.fromUserId} IS NOT NULL`
-          )
-        );
-
-      const settledTo = await db
-        .select({ total: sql<number>`COALESCE(SUM(${settlements.amount}), 0)` })
-        .from(settlements)
-        .where(
-          and(
-            eq(settlements.groupId, groupId),
-            eq(settlements.toUserId, member.userId),
-            sql`${settlements.toUserId} IS NOT NULL`
-          )
-        );
-
-      const balance =
-        (paid[0]?.total || 0) -
-        (owed[0]?.total || 0) +
-        (settledTo[0]?.total || 0) -
-        (settledFrom[0]?.total || 0);
-
-      balances.push({
-        userId: member.userId,
-        userName: member.user.name,
-        balance: Math.round(balance * 100) / 100,
-        isMock: false,
-      });
-    }
-
-    for (const mockUser of groupMockUsers) {
-      const owed = await db
-        .select({ total: sql<number>`COALESCE(SUM(${expenseSharesMock.share}), 0)` })
-        .from(expenseSharesMock)
-        .innerJoin(expenses, eq(expenseSharesMock.expenseId, expenses.id))
-        .where(
-          and(
-            eq(expenses.groupId, groupId),
-            eq(expenseSharesMock.mockUserId, mockUser.id)
-          )
-        );
-
-      const settledFrom = await db
-        .select({ total: sql<number>`COALESCE(SUM(${settlements.amount}), 0)` })
-        .from(settlements)
-        .where(
-          and(
-            eq(settlements.groupId, groupId),
-            eq(settlements.fromMockUserId, mockUser.id),
-            sql`${settlements.fromMockUserId} IS NOT NULL`
-          )
-        );
-
-      const settledTo = await db
-        .select({ total: sql<number>`COALESCE(SUM(${settlements.amount}), 0)` })
-        .from(settlements)
-        .where(
-          and(
-            eq(settlements.groupId, groupId),
-            eq(settlements.toMockUserId, mockUser.id),
-            sql`${settlements.toMockUserId} IS NOT NULL`
-          )
-        );
-
-      const balance =
-        0 -
-        (owed[0]?.total || 0) +
-        (settledTo[0]?.total || 0) -
-        (settledFrom[0]?.total || 0);
-
-      balances.push({
-        userId: mockUser.id,
-        userName: mockUser.name,
-        balance: Math.round(balance * 100) / 100,
-        isMock: true,
-      });
-    }
-
-    return balances;
-  })
-  .post(
-    "/settle",
-    async ({ body, userId, set }) => {
-      try {
         const membership = await db.query.groupMembers.findFirst({
-          where: and(
-            eq(groupMembers.groupId, body.groupId),
-            eq(groupMembers.userId, userId)
-          ),
+            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
         });
 
         if (!membership) {
-          set.status = 403;
-          return { error: "Not a member of this group" };
+            set.status = 403;
+            return { error: "Not a member of this group" };
         }
 
-        const [settlement] = await db
-          .insert(settlements)
-          .values({
-            groupId: body.groupId,
-            fromUserId: body.fromUserId || null,
-            toUserId: body.toUserId || null,
-            fromMockUserId: body.fromMockUserId || null,
-            toMockUserId: body.toMockUserId || null,
-            amount: body.amount,
-          })
-          .returning();
+        const group = await db.query.groups.findFirst({
+            where: eq(groups.id, groupId),
+        });
 
-        return settlement;
-      } catch (error) {
-        set.status = 500;
-        return { error: "Failed to record settlement" };
-      }
-    },
-    {
-      body: t.Object({
-        groupId: t.Number(),
-        fromUserId: t.Optional(t.Number()),
-        toUserId: t.Optional(t.Number()),
-        fromMockUserId: t.Optional(t.Number()),
-        toMockUserId: t.Optional(t.Number()),
-        amount: t.Number({ minimum: 0.01 }),
-      }),
-    }
-  )
-  .get("/group/:groupId/settlements", async ({ params, userId, set }) => {
-    const groupId = parseInt(params.groupId);
+        if (!group) {
+            set.status = 404;
+            return { error: "Group not found" };
+        }
 
-    const membership = await db.query.groupMembers.findFirst({
-      where: and(
-        eq(groupMembers.groupId, groupId),
-        eq(groupMembers.userId, userId)
-      ),
+        const baseCurrency = group.baseCurrency || "EUR";
+        const rates = await getExchangeRates();
+
+        const members = await db.query.groupMembers.findMany({
+            where: eq(groupMembers.groupId, groupId),
+            with: {
+                user: {
+                    columns: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+
+        const balances: Balance[] = [];
+
+        for (const member of members) {
+            const paidExpenses = await db
+                .select({ amount: expenses.amount, currency: expenses.currency })
+                .from(expenses)
+                .where(and(eq(expenses.groupId, groupId), eq(expenses.paidBy, member.id)));
+
+            const owedExpenses = await db
+                .select({
+                    share: expenseShares.share,
+                    currency: expenses.currency,
+                })
+                .from(expenseShares)
+                .innerJoin(expenses, eq(expenseShares.expenseId, expenses.id))
+                .where(and(eq(expenses.groupId, groupId), eq(expenseShares.memberId, member.id)));
+
+            const settlementsFrom = await db
+                .select({ amount: settlements.amount, currency: settlements.currency })
+                .from(settlements)
+                .where(and(eq(settlements.groupId, groupId), eq(settlements.fromMemberId, member.id)));
+
+            const settlementsTo = await db
+                .select({ amount: settlements.amount, currency: settlements.currency })
+                .from(settlements)
+                .where(and(eq(settlements.groupId, groupId), eq(settlements.toMemberId, member.id)));
+
+            const balanceByCurrency: { [key: string]: number } = {};
+
+            for (const exp of paidExpenses) {
+                const curr = exp.currency || "EUR";
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) + exp.amount;
+            }
+
+            for (const exp of owedExpenses) {
+                const curr = exp.currency || "EUR";
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) - exp.share;
+            }
+
+            for (const settlement of settlementsTo) {
+                const curr = settlement.currency || "EUR";
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) + settlement.amount;
+            }
+
+            for (const settlement of settlementsFrom) {
+                const curr = settlement.currency || "EUR";
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) - settlement.amount;
+            }
+
+            const currencyBalances: CurrencyBalance[] = Object.entries(balanceByCurrency)
+                .filter(([, amount]) => Math.abs(amount) >= 0.01)
+                .map(([currency, amount]) => ({
+                    currency,
+                    amount: Math.round(amount * 100) / 100,
+                }));
+
+            let balanceInBaseCurrency = 0;
+            for (const [currency, amount] of Object.entries(balanceByCurrency)) {
+                balanceInBaseCurrency += convertCurrency(amount, currency, baseCurrency, rates);
+            }
+
+            balances.push({
+                memberId: member.id,
+                memberName: member.user?.name || member.name || "Unknown",
+                balance: Math.round(balanceInBaseCurrency * 100) / 100,
+                balanceByCurrency: currencyBalances,
+                balanceInBaseCurrency: Math.round(balanceInBaseCurrency * 100) / 100,
+                isGuest: member.userId === null,
+            });
+        }
+
+        return balances;
+    })
+    .post(
+        "/settle",
+        async ({ body, userId, set }) => {
+            try {
+                const membership = await db.query.groupMembers.findFirst({
+                    where: and(eq(groupMembers.groupId, body.groupId), eq(groupMembers.userId, userId)),
+                });
+
+                if (!membership) {
+                    set.status = 403;
+                    return { error: "Not a member of this group" };
+                }
+
+                const [settlement] = await db
+                    .insert(settlements)
+                    .values({
+                        groupId: body.groupId,
+                        fromMemberId: body.fromMemberId,
+                        toMemberId: body.toMemberId,
+                        amount: body.amount,
+                        currency: body.currency || "EUR",
+                    })
+                    .returning();
+
+                return settlement;
+            } catch (error) {
+                console.error(error);
+                set.status = 500;
+                return { error: "Failed to record settlement" };
+            }
+        },
+        {
+            body: t.Object({
+                groupId: t.Number(),
+                fromMemberId: t.Number(),
+                toMemberId: t.Number(),
+                amount: t.Number({ minimum: 0.01 }),
+                currency: t.Optional(t.String()),
+            }),
+        },
+    )
+    .get("/group/:groupId/settlements", async ({ params, userId, set }) => {
+        const groupId = parseInt(params.groupId);
+
+        const membership = await db.query.groupMembers.findFirst({
+            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
+        });
+
+        if (!membership) {
+            set.status = 403;
+            return { error: "Not a member of this group" };
+        }
+
+        const groupSettlements = await db.query.settlements.findMany({
+            where: eq(settlements.groupId, groupId),
+            with: {
+                fromMember: {
+                    with: {
+                        user: {
+                            columns: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                },
+                toMember: {
+                    with: {
+                        user: {
+                            columns: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: (settlements, { desc }) => [desc(settlements.createdAt)],
+        });
+
+        return groupSettlements;
     });
-
-    if (!membership) {
-      set.status = 403;
-      return { error: "Not a member of this group" };
-    }
-
-    const groupSettlements = await db.query.settlements.findMany({
-      where: eq(settlements.groupId, groupId),
-      with: {
-        fromUser: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-        toUser: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-        fromMockUser: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-        toMockUser: {
-          columns: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: (settlements, { desc }) => [desc(settlements.createdAt)],
-    });
-
-    return groupSettlements;
-  });

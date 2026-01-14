@@ -1,39 +1,46 @@
 export interface User {
-  id: number;
-  email: string;
-  name: string;
-  createdAt: Date;
+    id: number;
+    email: string;
+    name: string;
+    createdAt: Date;
 }
 
 export interface Group {
-  id: number;
-  name: string;
-  description: string | null;
-  createdBy: number;
-  createdAt: Date;
+    id: number;
+    name: string;
+    description: string | null;
+    createdBy: number;
+    createdAt: Date;
 }
 
 export interface Expense {
-  id: number;
-  groupId: number;
-  description: string;
-  amount: number;
-  paidBy: number;
-  createdAt: Date;
+    id: number;
+    groupId: number;
+    description: string;
+    amount: number;
+    paidBy: number;
+    createdAt: Date;
+}
+
+export interface CurrencyBalance {
+    currency: string;
+    amount: number;
 }
 
 export interface Balance {
-  userId: number;
-  userName: string;
-  balance: number;
-  isMock?: boolean;
+    memberId: number;
+    memberName: string;
+    balance: number;
+    balanceByCurrency?: CurrencyBalance[];
+    balanceInBaseCurrency?: number;
+    isGuest?: boolean;
 }
 
 export interface Settlement {
-  id: number;
-  groupId: number;
-  fromUserId: number;
-  toUserId: number;
-  amount: number;
-  createdAt: Date;
+    id: number;
+    groupId: number;
+    fromMemberId: number;
+    toMemberId: number;
+    amount: number;
+    createdAt: Date;
 }
