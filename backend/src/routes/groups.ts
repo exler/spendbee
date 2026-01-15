@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { groupMembers, groups, users } from "../db/schema";
+import { groupMembers, groups } from "../db/schema";
 import { SUPPORTED_CURRENCIES } from "../services/currency";
 
 export const groupRoutes = new Elysia({ prefix: "/groups" })
@@ -93,7 +93,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         return userGroups.map((gm) => gm.group);
     })
     .get("/:id", async ({ params, userId, set }) => {
-        const groupId = parseInt(params.id);
+        const groupId = Number.parseInt(params.id);
 
         const membership = await db.query.groupMembers.findFirst({
             where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -134,7 +134,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         "/:id/invite",
         async ({ params, body, userId, set }) => {
             try {
-                const groupId = parseInt(params.id);
+                const groupId = Number.parseInt(params.id);
 
                 // Check if user is a member of the group
                 const membership = await db.query.groupMembers.findFirst({
@@ -219,7 +219,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         "/:id",
         async ({ params, body, userId, set }) => {
             try {
-                const groupId = parseInt(params.id);
+                const groupId = Number.parseInt(params.id);
 
                 const group = await db.query.groups.findFirst({
                     where: eq(groups.id, groupId),
@@ -261,7 +261,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         "/:id/currency",
         async ({ params, body, userId, set }) => {
             try {
-                const groupId = parseInt(params.id);
+                const groupId = Number.parseInt(params.id);
 
                 const group = await db.query.groups.findFirst({
                     where: eq(groups.id, groupId),
@@ -296,7 +296,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         "/:id/members",
         async ({ params, body, userId, set }) => {
             try {
-                const groupId = parseInt(params.id);
+                const groupId = Number.parseInt(params.id);
 
                 const membership = await db.query.groupMembers.findFirst({
                     where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -330,7 +330,7 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
         },
     )
     .get("/:id/members", async ({ params, userId, set }) => {
-        const groupId = parseInt(params.id);
+        const groupId = Number.parseInt(params.id);
 
         const membership = await db.query.groupMembers.findFirst({
             where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -358,8 +358,8 @@ export const groupRoutes = new Elysia({ prefix: "/groups" })
     })
     .delete("/:groupId/members/:memberId", async ({ params, userId, set }) => {
         try {
-            const groupId = parseInt(params.groupId);
-            const memberId = parseInt(params.memberId);
+            const groupId = Number.parseInt(params.groupId);
+            const memberId = Number.parseInt(params.memberId);
 
             const membership = await db.query.groupMembers.findFirst({
                 where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),

@@ -10,9 +10,11 @@
     "dependencies": {
         "@elysiajs/cors": "^1.1.1",
         "@elysiajs/jwt": "^1.1.1",
-        "elysia": "^1.1.23",
+        "@elysiajs/static": "^1.4.7",
+        "@mistralai/mistralai": "^1.11.0",
+        "bcryptjs": "^2.4.3",
         "drizzle-orm": "^0.36.4",
-        "bcryptjs": "^2.4.3"
+        "elysia": "^1.1.23"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

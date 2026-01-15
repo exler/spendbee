@@ -40,6 +40,8 @@
 		createdAt: Date;
 		payer: GroupMember;
 		shares: Array<{ member: GroupMember; share: number }>;
+		receiptImageUrl?: string;
+		receiptItems?: string;
 	}
 
 	interface Balance {
@@ -98,6 +100,19 @@
 	let editGroupCurrency = 'EUR';
 	let settingsSaved = false;
 
+	// Receipt scanning variables
+	let showScanReceipt = false;
+	let receiptImage: string | null = null;
+	let receiptImageUrl: string | null = null;
+	let receiptItems: Array<{
+		description: string;
+		quantity: number;
+		price: number;
+		assignedTo: number[];
+	}> = [];
+	let scanningReceipt = false;
+	let showReceiptPreview: number | null = null;
+
 	onMount(() => {
 		if (!$user) {
 			goto('/login');
@@ -154,6 +169,8 @@
 				createdAt: expenseDate || undefined,
 				paidBy: expensePaidBy || undefined,
 				sharedWith: selectedMembers,
+				receiptImageUrl: receiptImageUrl || undefined,
+				receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
 				customShares: customSharesArray,
 			});
 			expenseDescription = '';
@@ -164,6 +181,9 @@
 			selectedMembers = [];
 			splitEvenly = true;
 			customShares = {};
+			receiptImage = null;
+			receiptImageUrl = null;
+			receiptItems = [];
 			showAddExpense = false;
 			loadGroupData();
 		} catch (e) {
@@ -189,6 +209,109 @@
 			loadGroupData();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to settle debt';
+		}
+	}
+
+	async function handleReceiptUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		if (!file.type.startsWith('image/')) {
+			error = 'Please upload an image file';
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = async (e) => {
+			const imageData = e.target?.result as string;
+			receiptImage = imageData;
+			scanningReceipt = true;
+			error = '';
+
+			try {
+				const result = await api.expenses.analyzeReceipt({
+					groupId,
+					image: imageData,
+				});
+
+				expenseDescription = result.businessName || 'Receipt';
+				expenseCurrency = result.currency || 'EUR';
+				receiptImageUrl = result.imageUrl;
+
+				receiptItems = result.items.map((item: any) => ({
+					description: item.description,
+					quantity: item.quantity,
+					price: item.price,
+					assignedTo: [],
+				}));
+
+				const total =
+					result.total ||
+					receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+				expenseAmount = total.toFixed(2);
+
+				showScanReceipt = false;
+				showAddExpense = true;
+			} catch (e) {
+				error = e instanceof Error ? e.message : 'Failed to scan receipt';
+			} finally {
+				scanningReceipt = false;
+			}
+		};
+		reader.readAsDataURL(file);
+	}
+
+	function addReceiptItem() {
+		receiptItems = [
+			...receiptItems,
+			{ description: '', quantity: 1, price: 0, assignedTo: [] },
+		];
+	}
+
+	function deleteReceiptItem(index: number) {
+		receiptItems = receiptItems.filter((_, i) => i !== index);
+		updateTotalFromItems();
+	}
+
+	function updateTotalFromItems() {
+		const total = receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+		expenseAmount = total.toFixed(2);
+	}
+
+	function toggleItemAssignment(itemIndex: number, memberId: number) {
+		const item = receiptItems[itemIndex];
+		if (item.assignedTo.includes(memberId)) {
+			item.assignedTo = item.assignedTo.filter((id) => id !== memberId);
+		} else {
+			item.assignedTo = [...item.assignedTo, memberId];
+		}
+		receiptItems = [...receiptItems];
+		calculateCustomSharesFromItems();
+	}
+
+	function calculateCustomSharesFromItems() {
+		const memberShares: { [memberId: number]: number } = {};
+
+		for (const item of receiptItems) {
+			if (item.assignedTo.length > 0) {
+				const itemTotal = item.price * item.quantity;
+				const sharePerPerson = itemTotal / item.assignedTo.length;
+
+				for (const memberId of item.assignedTo) {
+					memberShares[memberId] = (memberShares[memberId] || 0) + sharePerPerson;
+				}
+			}
+		}
+
+		const assignedMembers = Object.keys(memberShares).map(Number);
+		if (assignedMembers.length > 0) {
+			selectedMembers = assignedMembers;
+			splitEvenly = false;
+			customShares = {};
+			for (const memberId of assignedMembers) {
+				customShares[memberId] = memberShares[memberId].toFixed(2);
+			}
 		}
 	}
 
@@ -407,12 +530,18 @@
 			</div>
 
 			{#if activeTab === 'expenses'}
-				<div class="mb-4">
+				<div class="mb-4 flex gap-2">
 					<button
 						on:click={() => (showAddExpense = true)}
-						class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+						class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
 					>
 						Add Expense
+					</button>
+					<button
+						on:click={() => (showScanReceipt = true)}
+						class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary"
+					>
+						📷 Scan Receipt
 					</button>
 				</div>
 
@@ -453,6 +582,24 @@
 										.map((s) => getMemberName(s.member))
 										.join(', ')}
 								</div>
+								{#if expense.receiptImageUrl}
+									<div class="mt-3 pt-3 border-t border-dark-100">
+										<div class="flex items-center gap-2">
+											<img
+												src={`http://localhost:3000${expense.receiptImageUrl}`}
+												alt="Receipt"
+												class="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
+												on:click={() => (showReceiptPreview = expense.id)}
+											/>
+											<button
+												on:click={() => (showReceiptPreview = expense.id)}
+												class="text-xs text-primary hover:text-primary-400"
+											>
+												View receipt
+											</button>
+										</div>
+									</div>
+								{/if}
 							</div>
 						{/each}
 					</div>
@@ -816,6 +963,79 @@
 					</select>
 					<p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
 				</div>
+				{#if receiptItems.length > 0}
+					<div class="border border-dark-100 rounded-lg p-3">
+						<div class="flex justify-between items-center mb-3">
+							<h4 class="text-sm font-medium text-white">Receipt Items</h4>
+							<button
+								type="button"
+								on:click={addReceiptItem}
+								class="text-xs text-primary hover:text-primary-400"
+							>
+								+ Add Item
+							</button>
+						</div>
+						<div class="space-y-3 max-h-64 overflow-y-auto">
+							{#each receiptItems as item, index}
+								<div class="bg-dark-200 p-3 rounded-lg">
+									<div class="flex gap-2 mb-2">
+										<input
+											type="text"
+											bind:value={item.description}
+											on:input={updateTotalFromItems}
+											placeholder="Item description"
+											class="flex-1 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+										/>
+										<input
+											type="number"
+											bind:value={item.quantity}
+											on:input={updateTotalFromItems}
+											min="1"
+											placeholder="Qty"
+											class="w-16 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+										/>
+										<input
+											type="number"
+											bind:value={item.price}
+											on:input={updateTotalFromItems}
+											step="0.01"
+											min="0"
+											placeholder="Price"
+											class="w-20 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+										/>
+										<button
+											type="button"
+											on:click={() => deleteReceiptItem(index)}
+											class="text-red-400 hover:text-red-300 text-xs"
+										>
+											✕
+										</button>
+									</div>
+									<div class="flex flex-wrap gap-2">
+										<span class="text-xs text-gray-400">Assign to:</span>
+										{#each allMembers as member}
+											<label class="flex items-center gap-1">
+												<input
+													type="checkbox"
+													checked={item.assignedTo.includes(member.id)}
+													on:change={() =>
+														toggleItemAssignment(index, member.id)}
+													class="w-3 h-3 text-primary bg-dark border-dark-100 rounded"
+												/>
+												<span class="text-xs text-gray-300"
+													>{getMemberName(member)}</span
+												>
+											</label>
+										{/each}
+									</div>
+								</div>
+							{/each}
+						</div>
+						<div class="mt-2 text-xs text-gray-400">
+							Auto-calculated from items. Assignments update split shares.
+						</div>
+					</div>
+				{/if}
 				<div>
 					<div class="flex justify-between items-center mb-2">
 						<label class="block text-sm font-medium text-gray-300"> Split with </label>
@@ -1151,4 +1371,80 @@
 			</form>
 		</div>
 	</div>
+{/if}
+
+{#if showScanReceipt && group}
+	<div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+		<div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
+			<h3 class="text-2xl font-bold text-white mb-4">Scan Receipt</h3>
+			<p class="text-sm text-gray-400 mb-4">
+				Upload a photo of your receipt and we'll automatically extract the items and
+				amounts.
+			</p>
+			<div class="space-y-4">
+				<div>
+					<label
+						for="receiptUpload"
+						class="block w-full px-4 py-8 bg-dark-200 border-2 border-dashed border-dark-100 rounded-lg text-center cursor-pointer hover:border-primary transition"
+					>
+						{#if scanningReceipt}
+							<div class="flex flex-col items-center gap-2">
+								<div
+									class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"
+								></div>
+								<span class="text-gray-400">Analyzing receipt...</span>
+							</div>
+						{:else}
+							<div class="flex flex-col items-center gap-2">
+								<span class="text-4xl">📷</span>
+								<span class="text-gray-300">Click to upload receipt image</span>
+								<span class="text-xs text-gray-400">JPG, PNG, or HEIC</span>
+							</div>
+						{/if}
+						<input
+							id="receiptUpload"
+							type="file"
+							accept="image/*"
+							on:change={handleReceiptUpload}
+							disabled={scanningReceipt}
+							class="hidden"
+						/>
+					</label>
+				</div>
+				<div class="flex gap-2">
+					<button
+						type="button"
+						on:click={() => (showScanReceipt = false)}
+						class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showReceiptPreview !== null}
+	{@const expense = expenses.find((e) => e.id === showReceiptPreview)}
+	{#if expense && expense.receiptImageUrl}
+		<div
+			class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+			on:click={() => (showReceiptPreview = null)}
+		>
+			<div class="max-w-4xl max-h-full" on:click|stopPropagation>
+				<img
+					src={`http://localhost:3000${expense.receiptImageUrl}`}
+					alt="Receipt"
+					class="max-w-full max-h-[90vh] object-contain rounded-lg"
+				/>
+				<button
+					on:click={() => (showReceiptPreview = null)}
+					class="mt-4 w-full bg-dark-300 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-200 transition"
+				>
+					Close
+				</button>
+			</div>
+		</div>
+	{/if}
 {/if}

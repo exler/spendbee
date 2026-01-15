@@ -91,9 +91,21 @@ export const api = {
 			createdAt?: string;
 			paidBy?: number;
 			sharedWith: number[];
+			receiptImageUrl?: string;
+			receiptItems?: Array<{
+				description: string;
+				quantity: number;
+				price: number;
+				assignedTo?: number[];
+			}>;
 			customShares?: Array<{ memberId: number; amount: number }>;
 		}) =>
 			fetchAPI('/expenses', {
+				method: 'POST',
+				body: JSON.stringify(data),
+			}),
+		analyzeReceipt: (data: { groupId: number; image: string }) =>
+			fetchAPI('/expenses/analyze-receipt', {
 				method: 'POST',
 				body: JSON.stringify(data),
 			}),

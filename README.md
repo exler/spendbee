@@ -16,6 +16,7 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - ✅ User registration and authentication with JWT
 - ✅ Create and join expense groups
 - ✅ Add expenses and split with selected members
+- ✅ **Receipt scanning** - Upload receipt photos and automatically extract items using AI (Mistral Pixtral)
 - ✅ **Select who paid** - Choose any group member as the payer (defaults to you)
 - ✅ **Custom expense dates** - Record past expenses with their actual date
 - ✅ **Multi-currency support** - Track expenses in 30+ currencies with ECB exchange rates
@@ -27,6 +28,8 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - ✅ Mobile-first responsive design
 - ✅ Yellow-black color scheme
 
+See [RECEIPT_SCANNING.md](RECEIPT_SCANNING.md) for detailed documentation on the receipt scanning feature.
+
 ## Getting Started
 
 ### Backend Setup
@@ -34,12 +37,19 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 ```bash
 cd backend
 bun install
+# Copy .env.example to .env and add your Mistral API key for receipt scanning
+cp .env.example .env
 bun run db:generate
 bun run db:migrate
 bun run dev
 ```
 
 Backend will run at `http://localhost:3000`
+
+**Note:** Receipt scanning requires a Mistral API key. Get one from [Mistral AI Console](https://console.mistral.ai/) and add it to your `.env` file:
+```bash
+MISTRAL_API_KEY=your_mistral_api_key_here
+```
 
 ### Frontend Setup
 
@@ -64,9 +74,13 @@ spendbee/
 │   │   │   ├── auth.ts        # Authentication routes
 │   │   │   ├── groups.ts      # Group management routes
 │   │   │   └── expenses.ts    # Expense and settlement routes
+│   │   ├── services/
+│   │   │   ├── currency.ts    # Currency conversion
+│   │   │   └── receipt.ts     # Receipt OCR with Mistral AI
 │   │   ├── types/
 │   │   │   └── index.ts       # TypeScript types
 │   │   └── index.ts           # Main app entry
+│   ├── uploads/               # Uploaded receipt images
 │   └── package.json
 └── frontend/
     ├── src/
@@ -91,7 +105,7 @@ spendbee/
 - **users** - User accounts (email, password, name)
 - **groups** - Expense groups (with base currency)
 - **group_members** - Group membership associations
-- **expenses** - Recorded expenses with payer (with currency)
+- **expenses** - Recorded expenses with payer, optional receipt image and items (with currency)
 - **expense_shares** - How expenses are split among users
 - **expense_shares_mock** - Expense shares for mock/guest users
 - **mock_users** - Guest members without system accounts
@@ -112,7 +126,8 @@ spendbee/
 - `GET /groups/currencies` - Get list of supported currencies
 
 ### Expenses
-- `POST /expenses` - Create new expense
+- `POST /expenses` - Create new expense (with optional receipt data)
+- `POST /expenses/analyze-receipt` - Analyze receipt image using AI OCR
 - `GET /expenses/group/:groupId` - List group expenses
 - `GET /expenses/group/:groupId/balances` - Get member balances
 - `POST /expenses/settle` - Record debt settlement

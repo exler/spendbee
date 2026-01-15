@@ -50,7 +50,7 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
         return { count: unreadNotifications.length };
     })
     .patch("/:id/read", async ({ params, userId, set }) => {
-        const notificationId = parseInt(params.id);
+        const notificationId = Number.parseInt(params.id);
 
         const notification = await db.query.notifications.findFirst({
             where: eq(notifications.id, notificationId),
@@ -67,7 +67,7 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
     })
     .post("/:id/accept", async ({ params, userId, set }) => {
         try {
-            const notificationId = parseInt(params.id);
+            const notificationId = Number.parseInt(params.id);
 
             const notification = await db.query.notifications.findFirst({
                 where: eq(notifications.id, notificationId),
@@ -115,7 +115,7 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
     })
     .post("/:id/decline", async ({ params, userId, set }) => {
         try {
-            const notificationId = parseInt(params.id);
+            const notificationId = Number.parseInt(params.id);
 
             const notification = await db.query.notifications.findFirst({
                 where: eq(notifications.id, notificationId),

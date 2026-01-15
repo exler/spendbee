@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { expenseShares, expenses, groupMembers, groups, settlements } from "../db/schema";
 import { convertCurrency, getExchangeRates } from "../services/currency";
+import { analyzeReceipt } from "../services/receipt";
 import type { Balance, CurrencyBalance } from "../types";
 
 export const expenseRoutes = new Elysia({ prefix: "/expenses" })
@@ -84,6 +85,8 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
                         amount: body.amount,
                         currency: body.currency || "EUR",
                         paidBy: paidBy,
+                        receiptImageUrl: body.receiptImageUrl || null,
+                        receiptItems: body.receiptItems ? JSON.stringify(body.receiptItems) : null,
                         createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
                     })
                     .returning();
@@ -132,6 +135,17 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
                 createdAt: t.Optional(t.String()),
                 paidBy: t.Optional(t.Number()),
                 sharedWith: t.Array(t.Number()),
+                receiptImageUrl: t.Optional(t.String()),
+                receiptItems: t.Optional(
+                    t.Array(
+                        t.Object({
+                            description: t.String(),
+                            quantity: t.Number(),
+                            price: t.Number(),
+                            assignedTo: t.Optional(t.Array(t.Number())),
+                        }),
+                    ),
+                ),
                 customShares: t.Optional(
                     t.Array(
                         t.Object({
@@ -144,7 +158,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         },
     )
     .get("/group/:groupId", async ({ params, userId, set }) => {
-        const groupId = parseInt(params.groupId);
+        const groupId = Number.parseInt(params.groupId);
 
         const membership = await db.query.groupMembers.findFirst({
             where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -191,7 +205,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         return groupExpenses;
     })
     .get("/group/:groupId/balances", async ({ params, userId, set }) => {
-        const groupId = parseInt(params.groupId);
+        const groupId = Number.parseInt(params.groupId);
 
         const membership = await db.query.groupMembers.findFirst({
             where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -341,7 +355,7 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         },
     )
     .get("/group/:groupId/settlements", async ({ params, userId, set }) => {
-        const groupId = parseInt(params.groupId);
+        const groupId = Number.parseInt(params.groupId);
 
         const membership = await db.query.groupMembers.findFirst({
             where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
@@ -380,4 +394,55 @@ export const expenseRoutes = new Elysia({ prefix: "/expenses" })
         });
 
         return groupSettlements;
-    });
+    })
+    .post(
+        "/analyze-receipt",
+        async ({ body, userId, set }) => {
+            try {
+                if (!process.env.MISTRAL_API_KEY) {
+                    set.status = 500;
+                    return { error: "Receipt scanning not configured. Please set MISTRAL_API_KEY." };
+                }
+
+                const membership = await db.query.groupMembers.findFirst({
+                    where: and(eq(groupMembers.groupId, body.groupId), eq(groupMembers.userId, userId)),
+                });
+
+                if (!membership) {
+                    set.status = 403;
+                    return { error: "Not a member of this group" };
+                }
+
+                // Extract base64 data from data URL if needed
+                let imageBase64 = body.image;
+                if (imageBase64.includes(",")) {
+                    imageBase64 = imageBase64.split(",")[1];
+                }
+
+                const receiptData = await analyzeReceipt(imageBase64);
+
+                // Save the image file
+                const timestamp = Date.now();
+                const filename = `receipt-${timestamp}.jpg`;
+                const filepath = `uploads/${filename}`;
+
+                const imageBuffer = Buffer.from(imageBase64, "base64");
+                await Bun.write(filepath, imageBuffer);
+
+                return {
+                    ...receiptData,
+                    imageUrl: `/uploads/${filename}`,
+                };
+            } catch (error) {
+                console.error("Receipt analysis error:", error);
+                set.status = 500;
+                return { error: error instanceof Error ? error.message : "Failed to analyze receipt" };
+            }
+        },
+        {
+            body: t.Object({
+                groupId: t.Number(),
+                image: t.String(),
+            }),
+        },
+    );

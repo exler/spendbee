@@ -1,4 +1,5 @@
 import { cors } from "@elysiajs/cors";
+import { staticPlugin } from "@elysiajs/static";
 import { Elysia } from "elysia";
 import { authRoutes } from "./routes/auth";
 import { expenseRoutes } from "./routes/expenses";
@@ -7,6 +8,7 @@ import { notificationRoutes } from "./routes/notifications";
 
 const app = new Elysia()
     .use(cors())
+    .use(staticPlugin({ assets: "uploads", prefix: "/uploads" }))
     .get("/", () => ({ message: "Spendbee API" }))
     .use(authRoutes)
     .use(groupRoutes)

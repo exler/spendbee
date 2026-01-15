@@ -48,6 +48,8 @@ export const expenses = sqliteTable("expenses", {
     paidBy: integer("paid_by")
         .notNull()
         .references(() => groupMembers.id, { onDelete: "cascade" }),
+    receiptImageUrl: text("receipt_image_url"),
+    receiptItems: text("receipt_items"), // JSON string of receipt items
     createdAt: integer("created_at", { mode: "timestamp" })
         .notNull()
         .$defaultFn(() => new Date()),
