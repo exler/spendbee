@@ -6,21 +6,21 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
 export const PATCH: RequestHandler = async (event) => {
-	const authError = requireAuth(event);
-	if (authError) return authError;
+    const authError = requireAuth(event);
+    if (authError) return authError;
 
-	const userId = event.locals.userId!;
-	const notificationId = Number.parseInt(event.params.id);
+    const userId = event.locals.userId!;
+    const notificationId = Number.parseInt(event.params.id);
 
-	const notification = await db.query.notifications.findFirst({
-		where: eq(notifications.id, notificationId),
-	});
+    const notification = await db.query.notifications.findFirst({
+        where: eq(notifications.id, notificationId),
+    });
 
-	if (!notification || notification.userId !== userId) {
-		return json({ error: "Notification not found" }, { status: 404 });
-	}
+    if (!notification || notification.userId !== userId) {
+        return json({ error: "Notification not found" }, { status: 404 });
+    }
 
-	await db.update(notifications).set({ read: true }).where(eq(notifications.id, notificationId));
+    await db.update(notifications).set({ read: true }).where(eq(notifications.id, notificationId));
 
-	return json({ success: true });
+    return json({ success: true });
 };

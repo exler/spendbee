@@ -6,27 +6,27 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
 export const POST: RequestHandler = async (event) => {
-	const authError = requireAuth(event);
-	if (authError) return authError;
+    const authError = requireAuth(event);
+    if (authError) return authError;
 
-	const userId = event.locals.userId!;
-	const notificationId = Number.parseInt(event.params.id);
+    const userId = event.locals.userId!;
+    const notificationId = Number.parseInt(event.params.id);
 
-	try {
-		const notification = await db.query.notifications.findFirst({
-			where: eq(notifications.id, notificationId),
-		});
+    try {
+        const notification = await db.query.notifications.findFirst({
+            where: eq(notifications.id, notificationId),
+        });
 
-		if (!notification || notification.userId !== userId) {
-			return json({ error: "Notification not found" }, { status: 404 });
-		}
+        if (!notification || notification.userId !== userId) {
+            return json({ error: "Notification not found" }, { status: 404 });
+        }
 
-		// Delete notification
-		await db.delete(notifications).where(eq(notifications.id, notificationId));
+        // Delete notification
+        await db.delete(notifications).where(eq(notifications.id, notificationId));
 
-		return json({ success: true });
-	} catch (error) {
-		console.error(error);
-		return json({ error: "Failed to decline invitation" }, { status: 500 });
-	}
+        return json({ success: true });
+    } catch (error) {
+        console.error(error);
+        return json({ error: "Failed to decline invitation" }, { status: 500 });
+    }
 };

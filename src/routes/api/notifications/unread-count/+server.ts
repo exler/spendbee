@@ -6,14 +6,14 @@ import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
 export const GET: RequestHandler = async (event) => {
-	const authError = requireAuth(event);
-	if (authError) return authError;
+    const authError = requireAuth(event);
+    if (authError) return authError;
 
-	const userId = event.locals.userId!;
+    const userId = event.locals.userId!;
 
-	const unreadNotifications = await db.query.notifications.findMany({
-		where: and(eq(notifications.userId, userId), eq(notifications.read, false)),
-	});
+    const unreadNotifications = await db.query.notifications.findMany({
+        where: and(eq(notifications.userId, userId), eq(notifications.read, false)),
+    });
 
-	return json({ count: unreadNotifications.length });
+    return json({ count: unreadNotifications.length });
 };
