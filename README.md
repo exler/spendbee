@@ -1,6 +1,6 @@
 # Spendbee 🐝
 
-A modern bill-splitting and expense tracking application to replace Splitwise.
+A modern bill-splitting and expense tracking PWA built with SvelteKit and Bun.
 
 ## Overview
 
@@ -8,8 +8,15 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 
 ## Architecture
 
-- **Backend**: Bun + ElysiaJS + DrizzleORM + SQLite
-- **Frontend**: SvelteKit + TailwindCSS + TypeScript
+**Unified SvelteKit Monolith**
+- **Runtime**: Bun
+- **Framework**: SvelteKit 2.0 (frontend + API routes)
+- **Database**: SQLite with Drizzle ORM
+- **Styling**: TailwindCSS
+- **Authentication**: JWT with HTTP-only cookies
+- **AI**: Mistral OCR for receipt scanning
+
+> **Note**: This application was recently migrated from a separate ElysiaJS backend to a unified SvelteKit architecture. See [MIGRATION.md](MIGRATION.md) for details.
 
 ## Features
 
@@ -20,118 +27,139 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - ✅ **Select who paid** - Choose any group member as the payer (defaults to you)
 - ✅ **Custom expense dates** - Record past expenses with their actual date
 - ✅ **Multi-currency support** - Track expenses in 30+ currencies with ECB exchange rates
-- ✅ **Mock users (guests)** - Add people without system accounts
+- ✅ **Guest members** - Add people without system accounts
 - ✅ **Group settings** - Group creators can modify name, description, and base currency
-- ✅ Real-time balance calculation
+- ✅ Real-time balance calculation across currencies
 - ✅ Record debt settlements
 - ✅ View expense history and settlement history
 - ✅ Mobile-first responsive design
 - ✅ Yellow-black color scheme
 
-See [RECEIPT_SCANNING.md](RECEIPT_SCANNING.md) for detailed documentation on the receipt scanning feature.
-
 ## Getting Started
 
-### Backend Setup
+### Prerequisites
 
-```bash
-cd backend
-bun install
-# Copy .env.example to .env and add your Mistral API key for receipt scanning
-cp .env.example .env
-bun run db:generate
-bun run db:migrate
-bun run dev
-```
+- Bun installed (`curl -fsSL https://bun.sh/install | bash`)
 
-Backend will run at `http://localhost:3000`
-
-**Note:** Receipt scanning requires a Mistral API key. Get one from [Mistral AI Console](https://console.mistral.ai/) and add it to your `.env` file:
-```bash
-MISTRAL_API_KEY=your_mistral_api_key_here
-```
-
-### Frontend Setup
+### Setup
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun install
+
+# Copy .env.example to .env and configure
+cp .env.example .env
+
+# Run database migrations
+bun run db:migrate
+
+# Start development server
+bun run dev
 ```
 
-Frontend will run at `http://localhost:5173`
+Application will run at `http://localhost:5173`
+
+### Environment Variables
+
+Create a `.env` file in the `frontend` directory:
+
+```bash
+JWT_SECRET=your-secret-key-here
+MISTRAL_API_KEY=your-mistral-api-key  # Optional, for receipt scanning
+```
+
+**Note:** Receipt scanning requires a Mistral API key. Get one from [Mistral AI Console](https://console.mistral.ai/)
 
 ## Project Structure
 
 ```
-spendbee/
-├── backend/
-│   ├── src/
-│   │   ├── db/
-│   │   │   ├── schema.ts      # Database schema
-│   │   │   └── index.ts       # Database connection
-│   │   ├── routes/
-│   │   │   ├── auth.ts        # Authentication routes
-│   │   │   ├── groups.ts      # Group management routes
-│   │   │   └── expenses.ts    # Expense and settlement routes
-│   │   ├── services/
-│   │   │   ├── currency.ts    # Currency conversion
-│   │   │   └── receipt.ts     # Receipt OCR with Mistral AI
-│   │   ├── types/
-│   │   │   └── index.ts       # TypeScript types
-│   │   └── index.ts           # Main app entry
-│   ├── uploads/               # Uploaded receipt images
-│   └── package.json
-└── frontend/
-    ├── src/
-    │   ├── lib/
-    │   │   ├── api/
-    │   │   │   └── index.ts   # API client
-    │   │   └── stores/
-    │   │       └── auth.ts    # Auth state management
-    │   ├── routes/
-    │   │   ├── +page.svelte           # Landing page
-    │   │   ├── login/+page.svelte     # Login page
-    │   │   ├── register/+page.svelte  # Register page
-    │   │   ├── groups/+page.svelte    # Groups list
-    │   │   └── groups/[id]/+page.svelte # Group detail
-    │   ├── app.css            # Global styles
-    │   └── app.html           # HTML template
-    └── package.json
+spendbee/frontend/
+├── src/
+│   ├── lib/
+│   │   ├── api/             # API client
+│   │   ├── server/          # Server-side code
+│   │   │   ├── db/          # Database schema & connection
+│   │   │   ├── services/    # Business logic (currency, receipt)
+│   │   │   ├── auth.ts      # JWT utilities
+│   │   │   └── utils.ts     # Server utilities
+│   │   ├── stores/          # Svelte stores
+│   │   └── types/           # TypeScript types
+│   ├── routes/
+│   │   ├── api/             # API endpoints
+│   │   │   ├── auth/        # Authentication
+│   │   │   ├── groups/      # Group management
+│   │   │   ├── expenses/    # Expense & settlement tracking
+│   │   │   └── notifications/ # Notifications
+│   │   ├── groups/          # UI pages
+│   │   ├── login/
+│   │   └── register/
+│   ├── hooks.server.ts      # SvelteKit server hooks (auth middleware)
+│   └── app.d.ts             # TypeScript declarations
+├── static/
+│   └── uploads/             # Receipt images
+├── drizzle/                 # Database migrations
+├── spendbee.db              # SQLite database file
+└── package.json
 ```
 
 ## Database Schema
 
 - **users** - User accounts (email, password, name)
-- **groups** - Expense groups (with base currency)
-- **group_members** - Group membership associations
-- **expenses** - Recorded expenses with payer, optional receipt image and items (with currency)
-- **expense_shares** - How expenses are split among users
-- **expense_shares_mock** - Expense shares for mock/guest users
-- **mock_users** - Guest members without system accounts
-- **settlements** - Debt payments between users (with currency)
+- **groups** - Expense groups with base currency
+- **group_members** - Group membership (supports registered users and guests)
+- **expenses** - Recorded expenses with payer, currency, optional receipt
+- **expense_shares** - How expenses are split among members
+- **settlements** - Debt payments between members (with currency)
+- **notifications** - User notifications (group invites, etc.)
 
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login user
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
 
 ### Groups
-- `GET /groups` - List user's groups
-- `POST /groups` - Create new group
-- `GET /groups/:id` - Get group details
-- `PATCH /groups/:id` - Update group settings (name, description, base currency)
-- `POST /groups/:id/join` - Join existing group
-- `GET /groups/currencies` - Get list of supported currencies
+- `GET /api/groups` - List user's groups
+- `POST /api/groups` - Create new group
+- `GET /api/groups/:id` - Get group details
+- `PATCH /api/groups/:id` - Update group settings
+- `POST /api/groups/:id/invite` - Invite user to group
+- `GET /api/groups/currencies` - List supported currencies
+- `POST /api/groups/:id/members` - Add guest member
+- `DELETE /api/groups/:groupId/members/:memberId` - Remove guest member
 
 ### Expenses
-- `POST /expenses` - Create new expense (with optional receipt data)
-- `POST /expenses/analyze-receipt` - Analyze receipt image using AI OCR
-- `GET /expenses/group/:groupId` - List group expenses
-- `GET /expenses/group/:groupId/balances` - Get member balances
-- `POST /expenses/settle` - Record debt settlement
-- `GET /expenses/group/:groupId/settlements` - List settlements
+- `POST /api/expenses` - Create new expense
+- `POST /api/expenses/analyze-receipt` - AI-powered receipt OCR
+- `GET /api/expenses/group/:groupId` - List group expenses
+- `GET /api/expenses/group/:groupId/balances` - Calculate balances
+- `POST /api/expenses/settle` - Record settlement
+- `GET /api/expenses/group/:groupId/settlements` - List settlements
+
+### Notifications
+- `GET /api/notifications` - List notifications
+- `GET /api/notifications/unread-count` - Get unread count
+- `PATCH /api/notifications/:id/read` - Mark as read
+- `POST /api/notifications/:id/accept` - Accept group invite
+- `POST /api/notifications/:id/decline` - Decline group invite
+
+## Development Commands
+
+```bash
+# Start dev server
+bun run dev
+
+# Build for production
+bun run build
+
+# Preview production build
+bun run preview
+
+# Database migrations
+bun run db:generate  # Generate migrations
+bun run db:migrate   # Run migrations
+bun run db:studio    # Open Drizzle Studio
+```
 
 ## Design
 
@@ -145,3 +173,4 @@ The app uses a mobile-first design approach with:
 ## License
 
 MIT
+
