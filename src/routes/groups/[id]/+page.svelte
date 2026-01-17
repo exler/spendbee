@@ -254,6 +254,7 @@
 				showScanReceipt = false;
 				showAddExpense = true;
 			} catch (e) {
+				console.error(e);
 				error = e instanceof Error ? e.message : 'Failed to scan receipt';
 			} finally {
 				scanningReceipt = false;

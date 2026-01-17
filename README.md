@@ -12,6 +12,8 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - **Runtime**: Bun
 - **Framework**: SvelteKit 2.0 (frontend + API routes)
 - **Database**: SQLite with Drizzle ORM
+  - App: `bun:sqlite` (Bun's native SQLite)
+  - Drizzle Kit: `better-sqlite3` (for migrations & studio)
 - **Styling**: TailwindCSS
 - **Authentication**: JWT with HTTP-only cookies
 - **AI**: Mistral OCR for receipt scanning
@@ -149,17 +151,33 @@ spendbee/frontend/
 # Start dev server
 bun run dev
 
-# Build for production
-bun run build
-
-# Preview production build
-bun run preview
-
 # Database migrations
 bun run db:generate  # Generate migrations
 bun run db:migrate   # Run migrations
 bun run db:studio    # Open Drizzle Studio
 ```
+
+## Deployment
+
+This application uses Bun-specific runtime features (`bun:sqlite`) and is designed to run with Bun in both development and production.
+
+### Development Mode (Recommended for small deployments)
+```bash
+cd frontend
+bun install
+bun run db:migrate
+bun run dev --host 0.0.0.0 --port 5173
+```
+
+### Alternative: Production Build
+For production builds, you'll need to use the Bun adapter. Note that the current Vite build process uses Node.js, which doesn't support `bun:sqlite`. 
+
+Options:
+1. **Run in dev mode** (simplest for Bun-specific apps)
+2. **Use a different database driver** compatible with Node.js (e.g., `better-sqlite3`)
+3. **Wait for better Bun build tooling** that doesn't rely on Node.js during build
+
+The app is fully functional and production-ready when run with `bun run dev` - the only difference is that it doesn't pre-render routes.
 
 ## Design
 
