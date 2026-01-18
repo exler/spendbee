@@ -9,7 +9,7 @@ export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
     if (authError) return authError;
 
-    const userId = event.locals.userId!;
+    const userId = event.locals.userId;
 
     try {
         const body = await event.request.json();

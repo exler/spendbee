@@ -382,7 +382,9 @@
                 baseCurrency: editGroupCurrency,
             });
             settingsSaved = true;
-            setTimeout(() => (settingsSaved = false), 3000);
+            setTimeout(() => {
+                settingsSaved = false;
+            }, 3000);
             loadGroupData();
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to update group settings";
@@ -393,7 +395,6 @@
         if (selectedMembers.includes(memberId)) {
             selectedMembers = selectedMembers.filter((id) => id !== memberId);
             delete customShares[memberId];
-            customShares = customShares;
         } else {
             selectedMembers = [...selectedMembers, memberId];
         }
@@ -424,7 +425,6 @@
         selectedMembers.forEach((memberId) => {
             customShares[memberId] = perPerson.toFixed(2);
         });
-        customShares = customShares;
     }
 
     function formatDate(date: Date) {
@@ -436,7 +436,7 @@
     }
 
     function getMemberName(member: GroupMember) {
-        if (member.user && member.user.name) return member.user.name;
+        if (member.user?.name) return member.user.name;
         if (member.name) return `${member.name} (guest)`;
         return "Unknown";
     }

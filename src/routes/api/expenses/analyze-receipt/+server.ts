@@ -40,6 +40,7 @@ export const POST: RequestHandler = async (event) => {
         }
 
         const receiptData = await analyzeReceipt(imageBase64);
+        console.log(receiptData);
 
         // Upload the image to S3
         const timestamp = Date.now();

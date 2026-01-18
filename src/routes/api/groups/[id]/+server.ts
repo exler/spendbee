@@ -51,7 +51,7 @@ export const PATCH: RequestHandler = async (event) => {
     const authError = requireAuth(event);
     if (authError) return authError;
 
-    const userId = event.locals.userId!;
+    const userId = event.locals.userId;
     const groupId = Number.parseInt(event.params.id);
 
     try {

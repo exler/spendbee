@@ -10,7 +10,7 @@ export const GET: RequestHandler = async (event) => {
     const authError = requireAuth(event);
     if (authError) return authError;
 
-    const userId = event.locals.userId!;
+    const userId = event.locals.userId;
 
     const userGroups = await db.query.groupMembers.findMany({
         where: eq(groupMembers.userId, userId),

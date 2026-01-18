@@ -1,14 +1,14 @@
-import { writable } from 'svelte/store';
+import { writable } from "svelte/store";
 
 export interface Notification {
-	id: number;
-	userId: number;
-	type: string;
-	title: string;
-	message: string;
-	data: string;
-	read: boolean;
-	createdAt: Date;
+    id: number;
+    userId: number;
+    type: string;
+    title: string;
+    message: string;
+    data: string;
+    read: boolean;
+    createdAt: Date;
 }
 
 export const notifications = writable<Notification[]>([]);

@@ -34,12 +34,23 @@
                 "useNumberNamespace": "error",
                 "noInferrableTypes": "error",
                 "noUselessElse": "error"
+            },
+            "correctness": {
+                "useParseIntRadix": "off"
             }
         }
+    },
+    "html": {
+        "experimentalFullSupportEnabled": true
     },
     "javascript": {
         "formatter": {
             "quoteStyle": "double"
+        }
+    },
+    "css": {
+        "parser": {
+            "tailwindDirectives": true
         }
     },
     "overrides": [
