@@ -19,7 +19,7 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 ## Project Structure
 
 ```
-spendbee/frontend/
+spendbee/
 ├── src/
 │   ├── lib/
 │   │   ├── api/             # API client
