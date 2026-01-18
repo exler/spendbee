@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET || "spendbee-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error("JWT_SECRET is not defined");
+}
+
 const secret = new TextEncoder().encode(JWT_SECRET);
 
 export async function signJWT(payload: { userId: number; email: string }): Promise<string> {

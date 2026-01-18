@@ -29,6 +29,3 @@ Thumbs.db
 logs/
 *.log
 npm-debug.log*
-
-# Generated files
-drizzle/
