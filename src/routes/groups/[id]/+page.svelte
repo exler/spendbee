@@ -238,6 +238,8 @@
                 expenseCurrency = result.currency || "EUR";
                 receiptImageUrl = result.imageUrl;
 
+                console.log(result);
+
                 receiptItems = result.items.map((item: any) => ({
                     description: item.description,
                     quantity: item.quantity,
@@ -571,7 +573,7 @@
                                     <div class="mt-3 pt-3 border-t border-dark-100">
                                         <div class="flex items-center gap-2">
                                             <img
-                                                src={`http://localhost:3000${expense.receiptImageUrl}`}
+                                                src={`/api/receipts/view/${encodeURIComponent(expense.receiptImageUrl)}`}
                                                 alt="Receipt"
                                                 class="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
                                                 on:click={() => (showReceiptPreview = expense.id)}
@@ -1358,7 +1360,7 @@
         >
             <div class="max-w-4xl max-h-full" on:click|stopPropagation>
                 <img
-                    src={`http://localhost:3000${expense.receiptImageUrl}`}
+                    src={`/api/receipts/view/${encodeURIComponent(expense.receiptImageUrl)}`}
                     alt="Receipt"
                     class="max-w-full max-h-[90vh] object-contain rounded-lg"
                 />

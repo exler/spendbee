@@ -5,6 +5,7 @@ import { groupMembers } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 import { analyzeReceipt } from "$lib/server/services/receipt";
+import { getReceiptKey, s3 } from "$lib/server/s3";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -40,17 +41,20 @@ export const POST: RequestHandler = async (event) => {
 
         const receiptData = await analyzeReceipt(imageBase64);
 
-        // Save the image file
+        // Upload the image to S3
         const timestamp = Date.now();
         const filename = `receipt-${timestamp}.jpg`;
-        const filepath = `static/uploads/${filename}`;
+        const key = getReceiptKey(groupId, filename);
 
         const imageBuffer = Buffer.from(imageBase64, "base64");
-        await Bun.write(filepath, imageBuffer);
+        const s3File = s3.file(key);
+        await s3File.write(imageBuffer, {
+            type: "image/jpeg",
+        });
 
         return json({
             ...receiptData,
-            imageUrl: `/uploads/${filename}`,
+            imageUrl: key, // Store S3 key instead of URL path
         });
     } catch (error) {
         console.error("Receipt analysis error:", error);

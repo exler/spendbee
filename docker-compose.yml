@@ -14,9 +14,17 @@ services:
             - DATABASE_URL=/app/data/spendbee.db
         volumes:
             # Persistent volume for SQLite database
-            - spendbee-data:/app/data
+            - spendbee_data:/app/data
         restart: unless-stopped
 
+    rustfs:
+        image: rustfs/rustfs:latest
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        volumes:
+            - rustfs_data:/data
+
 volumes:
-    spendbee-data:
-        driver: local
+    spendbee_data:
+    rustfs_data:
