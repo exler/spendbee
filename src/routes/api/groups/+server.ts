@@ -77,7 +77,7 @@ export const GET: RequestHandler = async (event) => {
 
             for (const settlement of settlementsTo) {
                 const curr = settlement.currency || "EUR";
-                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) + settlement.amount;
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) - settlement.amount;
             }
 
             // Settlements from user
@@ -88,7 +88,7 @@ export const GET: RequestHandler = async (event) => {
 
             for (const settlement of settlementsFrom) {
                 const curr = settlement.currency || "EUR";
-                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) - settlement.amount;
+                balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) + settlement.amount;
             }
 
             // Convert to base currency
