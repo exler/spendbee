@@ -48,7 +48,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         });
 
         return json({
-            token,
             user: {
                 id: user.id,
                 email: user.email,

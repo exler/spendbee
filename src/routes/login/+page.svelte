@@ -1,28 +1,27 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { user, token } from "$lib/stores/auth";
-    import { api } from "$lib/api";
+import { goto } from "$app/navigation";
+import { user } from "$lib/stores/auth";
+import { api } from "$lib/api";
 
-    let email = "";
-    let password = "";
-    let error = "";
-    let loading = false;
+let email = "";
+let password = "";
+let error = "";
+let loading = false;
 
-    async function handleLogin() {
-        error = "";
-        loading = true;
+async function handleLogin() {
+    error = "";
+    loading = true;
 
-        try {
-            const response = await api.auth.login({ email, password });
-            token.set(response.token);
-            user.set(response.user);
-            goto("/groups");
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Login failed";
-        } finally {
-            loading = false;
-        }
+    try {
+        const response = await api.auth.login({ email, password });
+        user.set(response.user);
+        goto("/groups");
+    } catch (e) {
+        error = e instanceof Error ? e.message : "Login failed";
+    } finally {
+        loading = false;
     }
+}
 </script>
 
 <svelte:head>

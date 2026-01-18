@@ -1,29 +1,28 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { user, token } from "$lib/stores/auth";
-    import { api } from "$lib/api";
+import { goto } from "$app/navigation";
+import { user } from "$lib/stores/auth";
+import { api } from "$lib/api";
 
-    let email = "";
-    let password = "";
-    let name = "";
-    let error = "";
-    let loading = false;
+let email = "";
+let password = "";
+let name = "";
+let error = "";
+let loading = false;
 
-    async function handleRegister() {
-        error = "";
-        loading = true;
+async function handleRegister() {
+    error = "";
+    loading = true;
 
-        try {
-            const response = await api.auth.register({ email, password, name });
-            token.set(response.token);
-            user.set(response.user);
-            goto("/groups");
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Registration failed";
-        } finally {
-            loading = false;
-        }
+    try {
+        const response = await api.auth.register({ email, password, name });
+        user.set(response.user);
+        goto("/groups");
+    } catch (e) {
+        error = e instanceof Error ? e.message : "Registration failed";
+    } finally {
+        loading = false;
     }
+}
 </script>
 
 <svelte:head>

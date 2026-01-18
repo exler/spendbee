@@ -1,22 +1,15 @@
-import { get } from "svelte/store";
-import { token } from "$lib/stores/auth";
-
 const API_URL = "/api";
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-    const $token = get(token);
     const headers: HeadersInit = {
         "Content-Type": "application/json",
         ...options.headers,
     };
 
-    if ($token) {
-        headers["Authorization"] = `Bearer ${$token}`;
-    }
-
     const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
         headers,
+        credentials: "include",
     });
 
     if (!response.ok) {
@@ -38,6 +31,10 @@ export const api = {
             fetchAPI("/auth/login", {
                 method: "POST",
                 body: JSON.stringify(data),
+            }),
+        logout: () =>
+            fetchAPI("/auth/logout", {
+                method: "POST",
             }),
     },
     groups: {

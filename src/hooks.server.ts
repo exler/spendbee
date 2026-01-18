@@ -2,8 +2,8 @@ import type { Handle } from "@sveltejs/kit";
 import { verifyJWT } from "$lib/server/auth";
 
 export const handle: Handle = async ({ event, resolve }) => {
-    // Check for JWT token in cookie or Authorization header
-    const token = event.cookies.get("token") || event.request.headers.get("Authorization")?.replace("Bearer ", "");
+    // Check for JWT token in httpOnly cookie
+    const token = event.cookies.get("token");
 
     if (token) {
         const payload = await verifyJWT(token);
