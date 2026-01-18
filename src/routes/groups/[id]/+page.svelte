@@ -1193,9 +1193,6 @@
                         class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
                         placeholder="e.g., John (visiting)"
                     />
-                    <p class="text-xs text-gray-400 mt-1">
-                        Add a note like "(guest)" or "(visiting)" to remember who they are
-                    </p>
                 </div>
                 <div class="flex gap-2">
                     <button
