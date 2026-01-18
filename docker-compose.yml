@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
     spendbee:
         build:
@@ -7,9 +5,9 @@ services:
             dockerfile: Dockerfile
         container_name: spendbee-app
         ports:
-            - "8080:8080"
+            - "3000:3000"
         environment:
-            - PORT=8080
+            - PORT=3000
             - DATABASE_URL=/app/data/spendbee.db
         volumes:
             # Persistent volume for SQLite database

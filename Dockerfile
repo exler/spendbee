@@ -42,10 +42,10 @@ COPY --from=builder --chown=bun:bun /app/migrate.ts ./migrate.ts
 USER bun
 
 # Expose the application port
-EXPOSE 8080
+EXPOSE 3000
 
 # Set environment variables
-ENV PORT=8080
+ENV PORT=3000
 ENV DATABASE_URL=/app/data/spendbee.db
 
 # Health check

@@ -8,8 +8,7 @@
         "build": "vite build",
         "preview": "vite preview",
         "db:generate": "drizzle-kit generate",
-        "db:migrate": "drizzle-kit migrate",
-        "db:studio": "drizzle-kit studio",
+        "db:migrate": "bun run migrate.ts",
         "lint": "biome lint"
     },
     "dependencies": {
