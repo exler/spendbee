@@ -30,6 +30,12 @@ WORKDIR /app
 RUN mkdir -p /app/data && \
     chown -R bun:bun /app
 
+# Copy package files for production dependencies
+COPY --from=builder --chown=bun:bun /app/package.json /app/bun.lock ./
+
+# Install ONLY production dependencies
+RUN bun install --frozen-lockfile --production
+
 # Copy built application from builder stage
 COPY --from=builder --chown=bun:bun /app/build ./build
 
