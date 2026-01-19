@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 import { analyzeReceipt } from "$lib/server/services/receipt";
 import { getReceiptKey, s3 } from "$lib/server/s3";
+import { env } from "$env/dynamic/private";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -14,7 +15,7 @@ export const POST: RequestHandler = async (event) => {
     const userId = event.locals.userId!;
 
     try {
-        if (!process.env.MISTRAL_API_KEY) {
+        if (!env.MISTRAL_API_KEY) {
             return json({ error: "Receipt scanning not configured. Please set MISTRAL_API_KEY." }, { status: 500 });
         }
 

@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "$env/dynamic/private";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = env.JWT_SECRET;
 const secret = new TextEncoder().encode(JWT_SECRET);
 
 export async function signJWT(payload: { userId: number; email: string }): Promise<string> {

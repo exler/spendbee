@@ -1,9 +1,10 @@
 import { Mistral } from "@mistralai/mistralai";
 import { responseFormatFromZodObject } from "@mistralai/mistralai/extra/structChat";
 import { z } from "zod";
+import { env } from "$env/dynamic/private";
 
 const mistral = new Mistral({
-    apiKey: process.env.MISTRAL_API_KEY || "",
+    apiKey: env.MISTRAL_API_KEY,
 });
 
 const receiptItemSchema = z.object({

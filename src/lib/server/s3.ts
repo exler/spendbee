@@ -1,14 +1,15 @@
 import { S3Client } from "bun";
+import { env } from "$env/dynamic/private";
 
 /**
  * S3 client configured for Backblaze B2
  * Uses environment variables for credentials
  */
 export const s3 = new S3Client({
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    bucket: process.env.S3_BUCKET,
-    endpoint: process.env.S3_ENDPOINT,
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    bucket: env.S3_BUCKET,
+    endpoint: env.S3_ENDPOINT,
 });
 
 /**
