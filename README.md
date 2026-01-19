@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="static/logo.png" width="180">
+    <img src="static/logo-1024x1024.png" width="180">
     <h3 align="center">Spendbee</h3>
     <p align="center">🐝 A bill-splitting and expense tracking app </p>
 </p>
