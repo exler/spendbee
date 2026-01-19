@@ -1,4 +1,4 @@
-import type { Handle } from "@sveltejs/kit";
+import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { verifyJWT } from "$lib/server/auth";
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -14,4 +14,25 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     return resolve(event);
+};
+
+export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+    const errorId = crypto.randomUUID();
+
+    // Log the full error details
+    console.error(`[${status}] ${event.request.method} ${event.url.pathname}`);
+    console.error(`Error ID: ${errorId}`);
+    console.error(`Message: ${message}`);
+
+    if (error instanceof Error) {
+        console.error(`Error name: ${error.name}`);
+        console.error(`Error message: ${error.message}`);
+        console.error(`Stack trace:\n${error.stack}`);
+    } else {
+        console.error("Error object:", error);
+    }
+
+    return {
+        message: `Internal Error (ID: ${errorId})`,
+    };
 };

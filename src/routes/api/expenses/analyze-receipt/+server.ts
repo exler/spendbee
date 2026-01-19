@@ -59,7 +59,14 @@ export const POST: RequestHandler = async (event) => {
             imageUrl: key, // Store S3 key instead of URL path
         });
     } catch (error) {
-        console.error("Receipt analysis error:", error);
+        console.error("Receipt analysis error:");
+        if (error instanceof Error) {
+            console.error(`Name: ${error.name}`);
+            console.error(`Message: ${error.message}`);
+            console.error(`Stack: ${error.stack}`);
+        } else {
+            console.error("Error object:", JSON.stringify(error, null, 2));
+        }
         return json({ error: error instanceof Error ? error.message : "Failed to analyze receipt" }, { status: 500 });
     }
 };

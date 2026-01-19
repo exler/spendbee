@@ -43,7 +43,14 @@ export async function analyzeReceipt(imageBase64: string): Promise<ReceiptData> 
 
         return receiptData as ReceiptData;
     } catch (error) {
-        console.error("Receipt analysis error:", error);
+        console.error("Receipt analysis error in service:");
+        if (error instanceof Error) {
+            console.error(`Name: ${error.name}`);
+            console.error(`Message: ${error.message}`);
+            console.error(`Stack: ${error.stack}`);
+        } else {
+            console.error("Error object:", JSON.stringify(error, null, 2));
+        }
         throw new Error("Failed to analyze receipt. Please try again or enter details manually.");
     }
 }

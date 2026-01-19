@@ -12,6 +12,7 @@ services:
         volumes:
             # Persistent volume for SQLite database
             - spendbee_data:/app/data
+        env_file: .env
         restart: unless-stopped
 
     rustfs:
