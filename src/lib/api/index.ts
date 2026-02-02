@@ -100,6 +100,7 @@ export const api = {
                 price: number;
                 assignedTo?: number[];
             }>;
+            attachments?: Array<{ url: string; name: string; type: string }>;
             customShares?: Array<{ memberId: number; amount: number }>;
         }) =>
             fetchAPI("/expenses", {
@@ -123,6 +124,7 @@ export const api = {
                     price: number;
                     assignedTo?: number[];
                 }>;
+                attachments?: Array<{ url: string; name: string; type: string }>;
                 customShares?: Array<{ memberId: number; amount: number }>;
             },
         ) =>
@@ -134,8 +136,17 @@ export const api = {
             fetchAPI(`/expenses/${id}`, {
                 method: "DELETE",
             }),
-        analyzeReceipt: (data: { groupId: number; image: string }) =>
+        analyzeReceipt: (data: {
+            groupId: number;
+            image: string;
+            additionalFiles?: Array<{ data: string; name: string }>;
+        }) =>
             fetchAPI("/expenses/analyze-receipt", {
+                method: "POST",
+                body: JSON.stringify(data),
+            }),
+        uploadAttachment: (data: { groupId: number; file: string; filename: string }) =>
+            fetchAPI("/expenses/upload-attachment", {
                 method: "POST",
                 body: JSON.stringify(data),
             }),

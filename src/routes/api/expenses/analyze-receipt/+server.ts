@@ -5,7 +5,7 @@ import { groupMembers } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 import { analyzeReceipt } from "$lib/server/services/receipt";
-import { getReceiptKey, s3 } from "$lib/server/s3";
+import { getReceiptKey, getAttachmentKey, getMimeType, s3 } from "$lib/server/s3";
 import { env } from "$env/dynamic/private";
 import * as Sentry from "@sentry/sveltekit";
 
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async (event) => {
         }
 
         const body = await event.request.json();
-        const { groupId: gId, image } = body;
+        const { groupId: gId, image, additionalFiles } = body;
         groupId = gId;
 
         if (!groupId || !image) {
@@ -57,9 +57,41 @@ export const POST: RequestHandler = async (event) => {
             type: "image/jpeg",
         });
 
+        // Upload additional files if provided
+        const uploadedAttachments = [];
+        if (additionalFiles && Array.isArray(additionalFiles)) {
+            for (const file of additionalFiles.slice(0, 4)) {
+                // Limit to 4 additional files
+                try {
+                    let fileBase64 = file.data;
+                    if (fileBase64.includes(",")) {
+                        fileBase64 = fileBase64.split(",")[1];
+                    }
+
+                    const fileBuffer = Buffer.from(fileBase64, "base64");
+                    const attachmentKey = getAttachmentKey(groupId, file.name);
+                    const attachmentS3File = s3.file(attachmentKey);
+                    const mimeType = getMimeType(file.name);
+
+                    await attachmentS3File.write(fileBuffer, {
+                        type: mimeType,
+                    });
+
+                    uploadedAttachments.push({
+                        url: attachmentKey,
+                        name: file.name,
+                        type: mimeType,
+                    });
+                } catch (error) {
+                    console.error("Failed to upload additional file:", file.name, error);
+                }
+            }
+        }
+
         return json({
             ...receiptData,
             imageUrl: key, // Store S3 key instead of URL path
+            attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
         });
     } catch (error) {
         console.error("Receipt analysis error:");

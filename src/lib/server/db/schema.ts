@@ -49,8 +49,9 @@ export const expenses = sqliteTable("expenses", {
     paidBy: integer("paid_by")
         .notNull()
         .references(() => groupMembers.id, { onDelete: "cascade" }),
-    receiptImageUrl: text("receipt_image_url"),
+    receiptImageUrl: text("receipt_image_url"), // Deprecated - kept for backward compatibility
     receiptItems: text("receipt_items"), // JSON string of receipt items
+    attachments: text("attachments"), // JSON string of attachment objects [{url: string, type: string, name: string}]
     createdAt: integer("created_at", { mode: "timestamp" })
         .notNull()
         .$defaultFn(() => new Date()),

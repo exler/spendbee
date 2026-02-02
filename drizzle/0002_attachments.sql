@@ -1,0 +1,1 @@
+ALTER TABLE `expenses` ADD `attachments` text;

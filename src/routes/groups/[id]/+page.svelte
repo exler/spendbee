@@ -4,6 +4,7 @@
     import { goto } from "$app/navigation";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
+    import AttachmentPreview from "$lib/components/AttachmentPreview.svelte";
 
     interface GroupMember {
         id: number;
@@ -43,6 +44,7 @@
         shares: Array<{ member: GroupMember; share: number }>;
         receiptImageUrl?: string;
         receiptItems?: string;
+        attachments?: string;
     }
 
     interface Balance {
@@ -114,6 +116,12 @@
     let scanningReceipt = false;
     let showReceiptPreview: number | null = null;
 
+    // Attachment variables
+    let expenseAttachments: Array<{ url: string; name: string; type: string }> = [];
+    let uploadingAttachment = false;
+    let additionalReceiptFiles: Array<{ data: string; name: string }> = [];
+    let previewImageUrl: string | null = null;
+
     // Edit expense variables
     let showEditExpense = false;
     let editingExpenseId: number | null = null;
@@ -180,6 +188,7 @@
                 sharedWith: selectedMembers,
                 receiptImageUrl: receiptImageUrl || undefined,
                 receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
+                attachments: expenseAttachments.length > 0 ? expenseAttachments : undefined,
                 customShares: customSharesArray,
             });
             resetExpenseForm();
@@ -232,6 +241,7 @@
                 const result = await api.expenses.analyzeReceipt({
                     groupId,
                     image: imageData,
+                    additionalFiles: additionalReceiptFiles.length > 0 ? additionalReceiptFiles : undefined,
                 });
 
                 expenseDescription = result.businessName || "Receipt";
@@ -250,6 +260,11 @@
                 const total = result.total || receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
                 expenseAmount = total.toFixed(2);
 
+                // Add uploaded attachments if any
+                if (result.attachments && result.attachments.length > 0) {
+                    expenseAttachments = result.attachments;
+                }
+
                 showScanReceipt = false;
                 showAddExpense = true;
             } catch (e) {
@@ -260,6 +275,116 @@
             }
         };
         reader.readAsDataURL(file);
+    }
+
+    async function handleAdditionalReceiptFiles(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) return;
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "application/pdf",
+            "text/csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ];
+
+        for (let i = 0; i < files.length && additionalReceiptFiles.length < 4; i++) {
+            const file = files[i];
+            
+            if (!allowedTypes.includes(file.type)) {
+                error = `File ${file.name} has unsupported type`;
+                continue;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target?.result as string;
+                additionalReceiptFiles = [
+                    ...additionalReceiptFiles,
+                    { data, name: file.name },
+                ];
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function handleAttachmentUpload(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) return;
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "application/pdf",
+            "text/csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ];
+
+        for (let i = 0; i < files.length && expenseAttachments.length < 5; i++) {
+            const file = files[i];
+
+            if (!allowedTypes.includes(file.type)) {
+                error = `File ${file.name} has unsupported type`;
+                continue;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                error = `File ${file.name} exceeds 10MB limit`;
+                continue;
+            }
+
+            uploadingAttachment = true;
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const fileData = e.target?.result as string;
+
+                    try {
+                        const result = await api.expenses.uploadAttachment({
+                            groupId,
+                            file: fileData,
+                            filename: file.name,
+                        });
+
+                        expenseAttachments = [...expenseAttachments, result];
+                    } catch (e) {
+                        error = e instanceof Error ? e.message : "Failed to upload attachment";
+                    } finally {
+                        uploadingAttachment = false;
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (e) {
+                error = e instanceof Error ? e.message : "Failed to read file";
+                uploadingAttachment = false;
+            }
+        }
+    }
+
+    function removeAttachment(index: number) {
+        expenseAttachments = expenseAttachments.filter((_, i) => i !== index);
+    }
+
+    function removeAdditionalReceiptFile(index: number) {
+        additionalReceiptFiles = additionalReceiptFiles.filter((_, i) => i !== index);
+    }
+
+    function handleImagePreview(attachment: { url: string; name: string; type: string }) {
+        previewImageUrl = attachment.url;
     }
 
     function addReceiptItem() {
@@ -498,6 +623,17 @@
         } else {
             receiptItems = [];
         }
+
+        // Load attachments
+        if (expense.attachments) {
+            try {
+                expenseAttachments = JSON.parse(expense.attachments);
+            } catch {
+                expenseAttachments = [];
+            }
+        } else {
+            expenseAttachments = [];
+        }
         
         showEditExpense = true;
     }
@@ -523,6 +659,7 @@
                 sharedWith: selectedMembers,
                 receiptImageUrl: receiptImageUrl || undefined,
                 receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
+                attachments: expenseAttachments.length > 0 ? expenseAttachments : undefined,
                 customShares: customSharesArray,
             });
             
@@ -560,6 +697,8 @@
         receiptImage = null;
         receiptImageUrl = null;
         receiptItems = [];
+        expenseAttachments = [];
+        additionalReceiptFiles = [];
     }
 </script>
 
@@ -567,10 +706,12 @@
     <title>{group?.name || "Group"} - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-b from-dark to-dark-300 pb-20">
+<div class="min-h-screen bg-dark-300 pb-20">
     <div class="max-w-4xl mx-auto p-4">
-        <div class="mb-4">
-            <a href="/groups" class="text-primary hover:text-primary-400">← Back to Groups</a>
+        <div class="mb-6">
+            <a href="/groups" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm">
+                <span>‹</span> Back to Groups
+            </a>
         </div>
 
         {#if loading}
@@ -607,42 +748,42 @@
             <div class="flex gap-2 mb-4 overflow-x-auto">
                 <button
                     on:click={() => (activeTab = "expenses")}
-                    class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'expenses'
-                        ? 'bg-primary text-dark'
-                        : 'bg-dark-300 text-gray-400'}"
+                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'expenses'
+                        ? 'bg-primary text-dark-300'
+                        : 'text-gray-400 hover:text-white'}"
                 >
                     Expenses
                 </button>
                 <button
                     on:click={() => (activeTab = "balances")}
-                    class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'balances'
-                        ? 'bg-primary text-dark'
-                        : 'bg-dark-300 text-gray-400'}"
+                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'balances'
+                        ? 'bg-primary text-dark-300'
+                        : 'text-gray-400 hover:text-white'}"
                 >
                     Balances
                 </button>
                 <button
                     on:click={() => (activeTab = "settlements")}
-                    class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'settlements'
-                        ? 'bg-primary text-dark'
-                        : 'bg-dark-300 text-gray-400'}"
+                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'settlements'
+                        ? 'bg-primary text-dark-300'
+                        : 'text-gray-400 hover:text-white'}"
                 >
                     Settlements
                 </button>
                 <button
                     on:click={() => (activeTab = "members")}
-                    class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'members'
-                        ? 'bg-primary text-dark'
-                        : 'bg-dark-300 text-gray-400'}"
+                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'members'
+                        ? 'bg-primary text-dark-300'
+                        : 'text-gray-400 hover:text-white'}"
                 >
                     Members
                 </button>
                 {#if group.createdBy === $user?.id}
                     <button
                         on:click={() => (activeTab = "settings")}
-                        class="px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap {activeTab === 'settings'
-                            ? 'bg-primary text-dark'
-                            : 'bg-dark-300 text-gray-400'}"
+                        class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'settings'
+                            ? 'bg-primary text-dark-300'
+                            : 'text-gray-400 hover:text-white'}"
                     >
                         Settings
                     </button>
@@ -650,88 +791,102 @@
             </div>
 
             {#if activeTab === "expenses"}
-                <div class="mb-4 flex gap-2">
+                <div class="mb-4 flex gap-3">
                     <button
                         on:click={() => (showAddExpense = true)}
                         disabled={group.archived}
-                        class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex-1 bg-primary text-dark-300 py-3.5 px-6 rounded-xl font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Add Expense
                     </button>
                     <button
                         on:click={() => (showScanReceipt = true)}
                         disabled={group.archived}
-                        class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex-1 bg-dark-200 text-white py-3.5 px-6 rounded-xl font-semibold hover:bg-dark-100 transition border border-dark-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        📷 Scan Receipt
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Scan Receipt
                     </button>
                 </div>
 
                 {#if expenses.length === 0}
-                    <div class="text-center py-12 bg-dark-300 rounded-lg">
+                    <div class="text-center py-16 bg-dark-200 rounded-xl border border-dark-100">
                         <p class="text-gray-400">No expenses yet.</p>
                     </div>
                 {:else}
                     <div class="space-y-3">
                         {#each expenses as expense}
-                            <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-                                <div class="flex justify-between items-start mb-2">
+                            <div class="bg-dark-200 p-5 rounded-xl border border-dark-100 hover:border-dark-50 transition">
+                                <div class="flex justify-between items-start mb-3">
                                     <div class="flex-1">
-                                        <h3 class="text-lg font-semibold text-white">
+                                        <h3 class="text-xl font-bold text-white mb-1">
                                             {expense.description}
                                         </h3>
-                                        {#if expense.note}
-                                            <p class="text-sm text-gray-300 mt-1 italic">
+                                        <p class="text-sm text-gray-400">
+                                            {#if expense.note}
                                                 {expense.note}
-                                            </p>
-                                        {/if}
-                                        <p class="text-sm text-gray-400 mt-1">
+                                            {/if}
+                                        </p>
+                                        <p class="text-sm text-gray-400 {expense.note ? 'mt-1' : ''}">
                                             Paid by {getMemberName(expense.payer)}
                                         </p>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-xl font-bold text-primary">
-                                            {formatCurrency(expense.amount)}
-                                            {expense.currency || "EUR"}
+                                        <div class="text-2xl font-bold text-primary mb-0.5">
+                                            {formatCurrency(expense.amount)} {expense.currency || "EUR"}
                                         </div>
                                         <div class="text-xs text-gray-400">
                                             {formatDate(expense.createdAt)}
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-sm text-gray-400">
+                                <div class="text-sm text-gray-400 mb-3">
                                     Split with: {expense.shares.map((s) => getMemberName(s.member)).join(", ")}
                                 </div>
-                                {#if expense.receiptImageUrl}
-                                    <div class="mt-3 pt-3 border-t border-dark-100">
-                                        <div class="flex items-center gap-2">
-                                            <img
-                                                src={`/api/receipts/view/${encodeURIComponent(expense.receiptImageUrl)}`}
-                                                alt="Receipt"
-                                                class="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
-                                                on:click={() => (showReceiptPreview = expense.id)}
+                                {#if expense.attachments || expense.receiptImageUrl}
+                                    <div class="mb-3">
+                                        <div class="text-xs text-gray-500 mb-2">Attachments</div>
+                                        {#if expense.attachments}
+                                            {@const parsedAttachments = JSON.parse(expense.attachments)}
+                                            <AttachmentPreview 
+                                                attachments={parsedAttachments}
+                                                onImageClick={handleImagePreview}
                                             />
-                                            <button
-                                                on:click={() => (showReceiptPreview = expense.id)}
-                                                class="text-xs text-primary hover:text-primary-400"
-                                            >
-                                                View receipt
-                                            </button>
-                                        </div>
+                                        {:else if expense.receiptImageUrl}
+                                            <AttachmentPreview
+                                                attachments={[
+                                                    {
+                                                        url: expense.receiptImageUrl,
+                                                        name: "receipt.jpg",
+                                                        type: "image/jpeg",
+                                                    },
+                                                ]}
+                                                onImageClick={handleImagePreview}
+                                            />
+                                        {/if}
                                     </div>
                                 {/if}
-                                <div class="mt-3 pt-3 border-t border-dark-100 flex gap-2">
+                                <div class="flex gap-2 justify-end">
                                     <button
                                         on:click={() => startEditExpense(expense)}
-                                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-dark-100 transition border border-primary"
+                                        class="w-10 h-10 flex items-center justify-center bg-dark-300 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                        title="Edit"
                                     >
-                                        Edit
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
                                     </button>
                                     <button
                                         on:click={() => deleteExpense(expense.id)}
-                                        class="flex-1 bg-dark-200 text-red-400 py-2 px-4 rounded-lg text-sm font-semibold hover:bg-dark-100 transition border border-red-400"
+                                        class="w-10 h-10 flex items-center justify-center bg-dark-300 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                        title="Delete"
                                     >
-                                        Delete
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                     </button>
                                 </div>
                             </div>
@@ -1089,6 +1244,41 @@
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
                 </div>
+                <!-- Attachments Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-300">
+                            Attachments ({expenseAttachments.length}/5)
+                        </label>
+                        {#if expenseAttachments.length < 5}
+                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
+                                + Add File
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.csv,.xlsx,.xls,.doc,.docx"
+                                    on:change={handleAttachmentUpload}
+                                    class="hidden"
+                                />
+                            </label>
+                        {/if}
+                    </div>
+                    {#if expenseAttachments.length > 0}
+                        <AttachmentPreview
+                            attachments={expenseAttachments}
+                            onRemove={removeAttachment}
+                            onImageClick={handleImagePreview}
+                            showRemove={true}
+                        />
+                    {:else}
+                        <p class="text-xs text-gray-400">
+                            You can attach images, PDFs, spreadsheets, or documents (max 5 files, 10MB each)
+                        </p>
+                    {/if}
+                    {#if uploadingAttachment}
+                        <div class="text-xs text-gray-400 mt-2">Uploading...</div>
+                    {/if}
+                </div>
                 {#if receiptItems.length > 0}
                     <div class="border border-dark-100 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-3">
@@ -1101,8 +1291,8 @@
                                 + Add Item
                             </button>
                         </div>
-                        <!-- Column Headers -->
-                        <div class="flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg sticky top-0 z-10">
+                        <!-- Column Headers - Hidden on mobile -->
+                        <div class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg">
                             <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
                             <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
                             <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
@@ -1111,7 +1301,57 @@
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             {#each receiptItems as item, index}
                                 <div class="bg-dark-200 p-3 rounded-lg">
-                                    <div class="flex gap-2 mb-2">
+                                    <!-- Mobile Layout: Stacked -->
+                                    <div class="md:hidden space-y-2">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs text-gray-400">Item {index + 1}</span>
+                                            <button
+                                                type="button"
+                                                on:click={() => deleteReceiptItem(index)}
+                                                class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-400 block mb-1">Name</label>
+                                            <input
+                                                type="text"
+                                                bind:value={item.description}
+                                                on:input={updateTotalFromItems}
+                                                placeholder="Item name"
+                                                class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                            />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label class="text-xs text-gray-400 block mb-1">Qty</label>
+                                                <input
+                                                    type="number"
+                                                    bind:value={item.quantity}
+                                                    on:input={updateTotalFromItems}
+                                                    min="1"
+                                                    placeholder="1"
+                                                    class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label class="text-xs text-gray-400 block mb-1">Price</label>
+                                                <input
+                                                    type="number"
+                                                    bind:value={item.price}
+                                                    on:input={updateTotalFromItems}
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Desktop Layout: Row -->
+                                    <div class="hidden md:flex gap-2 mb-2">
                                         <input
                                             type="text"
                                             bind:value={item.description}
@@ -1144,7 +1384,8 @@
                                             ✕
                                         </button>
                                     </div>
-                                    <div class="flex flex-wrap gap-2">
+                                    
+                                    <div class="flex flex-wrap gap-2 mt-2">
                                         <span class="text-xs text-gray-400">Assign to:</span>
                                         {#each allMembers as member}
                                             <label class="flex items-center gap-1">
@@ -1516,6 +1757,48 @@
                         />
                     </label>
                 </div>
+                <!-- Additional Files Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-300">
+                            Additional Files ({additionalReceiptFiles.length}/4)
+                        </label>
+                        {#if additionalReceiptFiles.length < 4}
+                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
+                                + Add Files
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.csv,.xlsx,.xls,.doc,.docx"
+                                    on:change={handleAdditionalReceiptFiles}
+                                    class="hidden"
+                                />
+                            </label>
+                        {/if}
+                    </div>
+                    {#if additionalReceiptFiles.length > 0}
+                        <div class="flex flex-wrap gap-2">
+                            {#each additionalReceiptFiles as file, index}
+                                <div class="relative group">
+                                    <div class="px-3 py-2 bg-dark-200 rounded border border-dark-100 text-xs text-gray-300">
+                                        {file.name}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        on:click={() => removeAdditionalReceiptFile(index)}
+                                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            {/each}
+                        </div>
+                    {:else}
+                        <p class="text-xs text-gray-400">
+                            Optionally attach up to 4 additional files (PDFs, spreadsheets, documents)
+                        </p>
+                    {/if}
+                </div>
                 <div class="flex gap-2">
                     <button
                         type="button"
@@ -1529,6 +1812,31 @@
         </div>
     </div>
 {/if}
+
+{#if previewImageUrl}
+    <div
+        class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+        on:click={() => (previewImageUrl = null)}
+        role="button"
+        tabindex="0"
+        on:keydown={(e) => e.key === 'Escape' && (previewImageUrl = null)}
+    >
+        <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
+            <img
+                src={`/api/receipts/view/${encodeURIComponent(previewImageUrl)}`}
+                alt="Preview"
+                class="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <button
+                on:click={() => (previewImageUrl = null)}
+                class="mt-4 w-full bg-dark-300 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-200 transition"
+            >
+                Close
+            </button>
+        </div>
+    </div>
+{/if}
+
 
 {#if showReceiptPreview !== null}
     {@const expense = expenses.find((e) => e.id === showReceiptPreview)}
@@ -1636,6 +1944,41 @@
                         {/each}
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
+                </div>
+                <!-- Attachments Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-300">
+                            Attachments ({expenseAttachments.length}/5)
+                        </label>
+                        {#if expenseAttachments.length < 5}
+                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
+                                + Add File
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.csv,.xlsx,.xls,.doc,.docx"
+                                    on:change={handleAttachmentUpload}
+                                    class="hidden"
+                                />
+                            </label>
+                        {/if}
+                    </div>
+                    {#if expenseAttachments.length > 0}
+                        <AttachmentPreview
+                            attachments={expenseAttachments}
+                            onRemove={removeAttachment}
+                            onImageClick={handleImagePreview}
+                            showRemove={true}
+                        />
+                    {:else}
+                        <p class="text-xs text-gray-400">
+                            You can attach images, PDFs, spreadsheets, or documents (max 5 files, 10MB each)
+                        </p>
+                    {/if}
+                    {#if uploadingAttachment}
+                        <div class="text-xs text-gray-400 mt-2">Uploading...</div>
+                    {/if}
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
@@ -1752,8 +2095,8 @@
                                 + Add Item
                             </button>
                         </div>
-                        <!-- Column Headers -->
-                        <div class="flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg sticky top-0 z-10">
+                        <!-- Column Headers - Hidden on mobile -->
+                        <div class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg">
                             <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
                             <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
                             <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
@@ -1762,7 +2105,57 @@
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             {#each receiptItems as item, index}
                                 <div class="bg-dark-200 p-3 rounded-lg">
-                                    <div class="flex gap-2 mb-2">
+                                    <!-- Mobile Layout: Stacked -->
+                                    <div class="md:hidden space-y-2">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs text-gray-400">Item {index + 1}</span>
+                                            <button
+                                                type="button"
+                                                on:click={() => deleteReceiptItem(index)}
+                                                class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-400 block mb-1">Name</label>
+                                            <input
+                                                type="text"
+                                                bind:value={item.description}
+                                                on:input={updateTotalFromItems}
+                                                placeholder="Item name"
+                                                class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                            />
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label class="text-xs text-gray-400 block mb-1">Qty</label>
+                                                <input
+                                                    type="number"
+                                                    bind:value={item.quantity}
+                                                    on:input={updateTotalFromItems}
+                                                    min="1"
+                                                    placeholder="1"
+                                                    class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label class="text-xs text-gray-400 block mb-1">Price</label>
+                                                <input
+                                                    type="number"
+                                                    bind:value={item.price}
+                                                    on:input={updateTotalFromItems}
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    class="w-full px-2 py-1.5 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Desktop Layout: Row -->
+                                    <div class="hidden md:flex gap-2 mb-2">
                                         <input
                                             type="text"
                                             bind:value={item.description}
@@ -1795,7 +2188,8 @@
                                             ✕
                                         </button>
                                     </div>
-                                    <div class="flex flex-wrap gap-2">
+                                    
+                                    <div class="flex flex-wrap gap-2 mt-2">
                                         <span class="text-xs text-gray-400">Assign to:</span>
                                         {#each allMembers as member}
                                             <label class="flex items-center gap-1">
@@ -1838,6 +2232,30 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+{/if}
+
+{#if previewImageUrl}
+    <div
+        class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+        on:click={() => (previewImageUrl = null)}
+        role="button"
+        tabindex="0"
+        on:keydown={(e) => e.key === 'Escape' && (previewImageUrl = null)}
+    >
+        <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
+            <img
+                src={`/api/receipts/view/${encodeURIComponent(previewImageUrl)}`}
+                alt="Preview"
+                class="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <button
+                on:click={() => (previewImageUrl = null)}
+                class="mt-4 w-full bg-dark-300 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-200 transition"
+            >
+                Close
+            </button>
         </div>
     </div>
 {/if}

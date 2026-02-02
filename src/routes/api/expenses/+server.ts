@@ -24,6 +24,7 @@ export const POST: RequestHandler = async (event) => {
             sharedWith,
             receiptImageUrl,
             receiptItems,
+            attachments,
             customShares,
         } = body;
 
@@ -76,6 +77,7 @@ export const POST: RequestHandler = async (event) => {
                 paidBy: paidByMemberId,
                 receiptImageUrl: receiptImageUrl || null,
                 receiptItems: receiptItems ? JSON.stringify(receiptItems) : null,
+                attachments: attachments ? JSON.stringify(attachments) : null,
                 createdAt: createdAt ? new Date(createdAt) : new Date(),
             })
             .returning();

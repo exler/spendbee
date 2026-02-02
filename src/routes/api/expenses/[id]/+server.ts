@@ -68,6 +68,7 @@ export const PATCH = async (event: RequestEvent) => {
             sharedWith,
             receiptImageUrl,
             receiptItems,
+            attachments,
             customShares,
         } = body;
 
@@ -117,6 +118,7 @@ export const PATCH = async (event: RequestEvent) => {
         if (paidBy !== undefined) updateData.paidBy = paidBy;
         if (receiptImageUrl !== undefined) updateData.receiptImageUrl = receiptImageUrl || null;
         if (receiptItems !== undefined) updateData.receiptItems = receiptItems ? JSON.stringify(receiptItems) : null;
+        if (attachments !== undefined) updateData.attachments = attachments ? JSON.stringify(attachments) : null;
         if (createdAt !== undefined) updateData.createdAt = new Date(createdAt);
 
         // Update the expense

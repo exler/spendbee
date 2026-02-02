@@ -15,6 +15,13 @@
             "when": 1770044285634,
             "tag": "0001_archivization",
             "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "6",
+            "when": 1770056487825,
+            "tag": "0002_attachments",
+            "breakpoints": true
         }
     ]
 }

@@ -22,6 +22,12 @@ export interface Expense {
     createdAt: Date;
 }
 
+export interface Attachment {
+    url: string;
+    name: string;
+    type: string;
+}
+
 export interface CurrencyBalance {
     currency: string;
     amount: number;
