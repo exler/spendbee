@@ -11,6 +11,7 @@ export const GET: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId;
+    const includeArchived = event.url.searchParams.get("includeArchived") === "true";
 
     const userGroups = await db.query.groupMembers.findMany({
         where: eq(groupMembers.userId, userId),
@@ -29,11 +30,14 @@ export const GET: RequestHandler = async (event) => {
         },
     });
 
+    // Filter out archived groups unless explicitly requested
+    const filteredGroups = includeArchived ? userGroups : userGroups.filter((gm) => !gm.group.archived);
+
     const rates = await getExchangeRates();
 
     // Calculate user balance for each group
     const groupsWithBalance = await Promise.all(
-        userGroups.map(async (gm) => {
+        filteredGroups.map(async (gm) => {
             const group = gm.group;
             const baseCurrency = group.baseCurrency || "EUR";
 

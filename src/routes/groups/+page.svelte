@@ -11,6 +11,7 @@
         description: string | null;
         createdBy: number;
         createdAt: Date;
+        archived?: boolean;
         userBalance?: number;
         baseCurrency?: string;
     }
@@ -19,6 +20,7 @@
     let loading = true;
     let showCreateModal = false;
     let showNotifications = false;
+    let showArchivedGroups = false;
     let newGroupName = "";
     let newGroupDescription = "";
     let newGroupCurrency = "EUR";
@@ -60,12 +62,16 @@
 
     async function loadGroups() {
         try {
-            groups = await api.groups.list();
+            groups = await api.groups.list(showArchivedGroups);
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to load groups";
         } finally {
             loading = false;
         }
+    }
+
+    $: if (showArchivedGroups !== undefined) {
+        loadGroups();
     }
 
     async function createGroup() {
@@ -220,10 +226,21 @@
             <div class="flex gap-2 mb-4">
                 <button
                     on:click={() => (showCreateModal = true)}
-                    class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+                    class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
                 >
                     Create Group
                 </button>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+                <input
+                    type="checkbox"
+                    id="showArchived"
+                    bind:checked={showArchivedGroups}
+                    class="w-4 h-4 bg-dark-200 border border-dark-100 rounded text-primary focus:ring-primary"
+                />
+                <label for="showArchived" class="text-sm text-gray-300 cursor-pointer">
+                    Show archived groups
+                </label>
             </div>
         </div>
 
@@ -241,11 +258,18 @@
                 {#each groups as group}
                     <a
                         href="/groups/{group.id}"
-                        class="block bg-dark-300 p-4 rounded-lg hover:bg-dark-200 transition border border-dark-100 hover:border-primary"
+                        class="block bg-dark-300 p-4 rounded-lg hover:bg-dark-200 transition border border-dark-100 hover:border-primary {group.archived ? 'opacity-60' : ''}"
                     >
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
-                                <h3 class="text-xl font-semibold text-white">{group.name}</h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xl font-semibold text-white">{group.name}</h3>
+                                    {#if group.archived}
+                                        <span class="text-xs bg-dark-100 text-gray-400 px-2 py-1 rounded">
+                                            Archived
+                                        </span>
+                                    {/if}
+                                </div>
                                 {#if group.description}
                                     <p class="text-gray-400 mt-1">{group.description}</p>
                                 {/if}

@@ -21,6 +21,7 @@
         name: string;
         description: string | null;
         baseCurrency?: string;
+        archived?: boolean;
         createdBy?: number;
         members: GroupMember[];
     }
@@ -385,6 +386,28 @@
         }
     }
 
+    async function toggleArchive() {
+        if (!group) return;
+
+        const newArchivedState = !group.archived;
+        const action = newArchivedState ? "archive" : "unarchive";
+
+        if (
+            !confirm(
+                `Are you sure you want to ${action} this group? ${newArchivedState ? "Archived groups cannot have expenses added or debts settled until unarchived." : ""}`,
+            )
+        ) {
+            return;
+        }
+
+        try {
+            await api.groups.archive(groupId, newArchivedState);
+            loadGroupData();
+        } catch (e) {
+            error = e instanceof Error ? e.message : `Failed to ${action} group`;
+        }
+    }
+
     function toggleMember(memberId: number) {
         if (selectedMembers.includes(memberId)) {
             selectedMembers = selectedMembers.filter((id) => id !== memberId);
@@ -549,13 +572,23 @@
             </div>
         {:else if group}
             <div class="mb-6">
-                <h1 class="text-3xl font-bold text-white mb-2">{group.name}</h1>
+                <div class="flex items-center gap-2 mb-2">
+                    <h1 class="text-3xl font-bold text-white">{group.name}</h1>
+                    {#if group.archived}
+                        <span class="bg-dark-100 text-gray-400 px-3 py-1 rounded text-sm">Archived</span>
+                    {/if}
+                </div>
                 {#if group.description}
                     <p class="text-gray-400">{group.description}</p>
                 {/if}
                 <div class="mt-2 text-sm text-gray-400">
                     {allMembers.length} members ({allMembers.filter((m) => m.userId === null).length} guests)
                 </div>
+                {#if group.archived}
+                    <div class="mt-3 bg-yellow-900/30 border border-yellow-700 text-yellow-200 p-3 rounded">
+                        This group is archived. You cannot add expenses or settle debts until it is unarchived.
+                    </div>
+                {/if}
             </div>
 
             {#if error}
@@ -613,13 +646,15 @@
                 <div class="mb-4 flex gap-2">
                     <button
                         on:click={() => (showAddExpense = true)}
-                        class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        disabled={group.archived}
+                        class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Add Expense
                     </button>
                     <button
                         on:click={() => (showScanReceipt = true)}
-                        class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary"
+                        disabled={group.archived}
+                        class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         📷 Scan Receipt
                     </button>
@@ -702,7 +737,8 @@
                 <div class="mb-4">
                     <button
                         on:click={() => (showSettleDebt = true)}
-                        class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        disabled={group.archived}
+                        class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Settle Debt
                     </button>
@@ -931,6 +967,27 @@
                                 Save Settings
                             </button>
                         </form>
+
+                        <div class="mt-6 pt-6 border-t border-dark-100">
+                            <h4 class="text-lg font-semibold text-white mb-3">Archive Group</h4>
+                            <p class="text-sm text-gray-400 mb-4">
+                                {#if group.archived}
+                                    This group is currently archived. Unarchive it to add expenses or settle debts.
+                                {:else}
+                                    Archive this group to hide it from your groups list. You can unarchive it later if
+                                    needed.
+                                {/if}
+                            </p>
+                            <button
+                                type="button"
+                                on:click={toggleArchive}
+                                class="w-full {group.archived
+                                    ? 'bg-primary text-dark'
+                                    : 'bg-dark-200 text-white'} py-3 px-6 rounded-lg font-semibold hover:opacity-80 transition"
+                            >
+                                {group.archived ? "Unarchive Group" : "Archive Group"}
+                            </button>
+                        </div>
                     </div>
                 {:else}
                     <div class="text-center py-12 bg-dark-300 rounded-lg">

@@ -16,6 +16,7 @@ export const groups = sqliteTable("groups", {
     name: text("name").notNull(),
     description: text("description"),
     baseCurrency: text("base_currency").default("EUR"),
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     createdBy: integer("created_by")
         .notNull()
         .references(() => users.id),

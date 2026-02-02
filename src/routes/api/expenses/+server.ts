@@ -3,7 +3,7 @@ import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import { expenseShares, expenses, groupMembers } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "$lib/server/utils";
+import { requireAuth, checkGroupArchived } from "$lib/server/utils";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -38,6 +38,15 @@ export const POST: RequestHandler = async (event) => {
 
         if (!membership) {
             return json({ error: "Not a member of this group" }, { status: 403 });
+        }
+
+        // Check if group is archived
+        const isArchived = await checkGroupArchived(groupId);
+        if (isArchived) {
+            return json(
+                { error: "Cannot add expenses to archived groups. Please unarchive the group first." },
+                { status: 403 },
+            );
         }
 
         // Validate custom date if provided

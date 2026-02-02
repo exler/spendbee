@@ -38,7 +38,7 @@ export const api = {
             }),
     },
     groups: {
-        list: () => fetchAPI("/groups"),
+        list: (includeArchived?: boolean) => fetchAPI(`/groups${includeArchived ? "?includeArchived=true" : ""}`),
         get: (id: number) => fetchAPI(`/groups/${id}`),
         create: (data: { name: string; description?: string; baseCurrency?: string }) =>
             fetchAPI("/groups", {
@@ -49,6 +49,11 @@ export const api = {
             fetchAPI(`/groups/${id}`, {
                 method: "PATCH",
                 body: JSON.stringify(data),
+            }),
+        archive: (id: number, archived: boolean) =>
+            fetchAPI(`/groups/${id}/archive`, {
+                method: "PATCH",
+                body: JSON.stringify({ archived }),
             }),
         invite: (id: number, email: string) =>
             fetchAPI(`/groups/${id}/invite`, {

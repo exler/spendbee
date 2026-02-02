@@ -2,7 +2,7 @@ import { json, type RequestEvent } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import { expenseShares, expenses, groupMembers } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "$lib/server/utils";
+import { requireAuth, checkGroupArchived } from "$lib/server/utils";
 
 export const DELETE = async (event: RequestEvent) => {
     const authError = requireAuth(event);
@@ -28,6 +28,15 @@ export const DELETE = async (event: RequestEvent) => {
 
         if (!membership) {
             return json({ error: "Not a member of this group" }, { status: 403 });
+        }
+
+        // Check if group is archived
+        const isArchived = await checkGroupArchived(expense.groupId);
+        if (isArchived) {
+            return json(
+                { error: "Cannot delete expenses from archived groups. Please unarchive the group first." },
+                { status: 403 },
+            );
         }
 
         // Delete the expense (shares will be cascade deleted)
@@ -78,6 +87,15 @@ export const PATCH = async (event: RequestEvent) => {
 
         if (!membership) {
             return json({ error: "Not a member of this group" }, { status: 403 });
+        }
+
+        // Check if group is archived
+        const isArchived = await checkGroupArchived(expense.groupId);
+        if (isArchived) {
+            return json(
+                { error: "Cannot update expenses in archived groups. Please unarchive the group first." },
+                { status: 403 },
+            );
         }
 
         // Validate custom date if provided
