@@ -146,6 +146,11 @@
                 editGroupDescription = group.description || "";
                 editGroupCurrency = group.baseCurrency || "EUR";
             }
+            // Set default paidBy to current user's member ID
+            const currentUserMember = allMembers.find(m => m.userId === $user?.id);
+            if (currentUserMember && expensePaidBy === 0) {
+                expensePaidBy = currentUserMember.id;
+            }
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to load group data";
         } finally {
@@ -546,7 +551,9 @@
         expenseNote = "";
         expenseAmount = "";
         expenseDate = "";
-        expensePaidBy = 0;
+        // Set default paidBy to current user's member ID
+        const currentUserMember = allMembers.find(m => m.userId === $user?.id);
+        expensePaidBy = currentUserMember?.id || 0;
         selectedMembers = [];
         splitEvenly = true;
         customShares = {};
@@ -1070,11 +1077,14 @@
                         bind:value={expensePaidBy}
                         class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
                     >
-                        <option value={0}>Me ({$user?.name})</option>
                         {#each allMembers as member}
-                            {#if member.userId && member.userId !== $user?.id}
-                                <option value={member.id}>{getMemberName(member)}</option>
-                            {/if}
+                            <option value={member.id}>
+                                {#if member.userId === $user?.id}
+                                    Me ({getMemberName(member)})
+                                {:else}
+                                    {getMemberName(member)}
+                                {/if}
+                            </option>
                         {/each}
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
@@ -1090,6 +1100,13 @@
                             >
                                 + Add Item
                             </button>
+                        </div>
+                        <!-- Column Headers -->
+                        <div class="flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg sticky top-0 z-10">
+                            <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
+                            <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
+                            <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
+                            <div class="w-6"></div>
                         </div>
                         <div class="space-y-3 max-h-64 overflow-y-auto">
                             {#each receiptItems as item, index}
@@ -1608,11 +1625,14 @@
                         bind:value={expensePaidBy}
                         class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
                     >
-                        <option value={0}>Me ({$user?.name})</option>
                         {#each allMembers as member}
-                            {#if member.userId && member.userId !== $user?.id}
-                                <option value={member.id}>{getMemberName(member)}</option>
-                            {/if}
+                            <option value={member.id}>
+                                {#if member.userId === $user?.id}
+                                    Me ({getMemberName(member)})
+                                {:else}
+                                    {getMemberName(member)}
+                                {/if}
+                            </option>
                         {/each}
                     </select>
                     <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
@@ -1705,6 +1725,99 @@
                         </div>
                     {/if}
                 </div>
+                
+                <!-- Receipt Image Display -->
+                {#if receiptImageUrl}
+                    <div class="border border-dark-100 rounded-lg p-3">
+                        <h4 class="text-sm font-medium text-white mb-2">Receipt Image</h4>
+                        <img
+                            src={`/api/receipts/view/${encodeURIComponent(receiptImageUrl)}`}
+                            alt="Receipt"
+                            class="w-full rounded-lg cursor-pointer hover:opacity-90 transition"
+                            on:click={() => (showReceiptPreview = editingExpenseId)}
+                        />
+                    </div>
+                {/if}
+                
+                <!-- Receipt Items Section -->
+                {#if receiptItems.length > 0}
+                    <div class="border border-dark-100 rounded-lg p-3">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-sm font-medium text-white">Receipt Items</h4>
+                            <button
+                                type="button"
+                                on:click={addReceiptItem}
+                                class="text-xs text-primary hover:text-primary-400"
+                            >
+                                + Add Item
+                            </button>
+                        </div>
+                        <!-- Column Headers -->
+                        <div class="flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg sticky top-0 z-10">
+                            <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
+                            <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
+                            <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
+                            <div class="w-6"></div>
+                        </div>
+                        <div class="space-y-3 max-h-64 overflow-y-auto">
+                            {#each receiptItems as item, index}
+                                <div class="bg-dark-200 p-3 rounded-lg">
+                                    <div class="flex gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            bind:value={item.description}
+                                            on:input={updateTotalFromItems}
+                                            placeholder="Item description"
+                                            class="flex-1 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                        />
+                                        <input
+                                            type="number"
+                                            bind:value={item.quantity}
+                                            on:input={updateTotalFromItems}
+                                            min="1"
+                                            placeholder="Qty"
+                                            class="w-16 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                        />
+                                        <input
+                                            type="number"
+                                            bind:value={item.price}
+                                            on:input={updateTotalFromItems}
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="Price"
+                                            class="w-20 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                        />
+                                        <button
+                                            type="button"
+                                            on:click={() => deleteReceiptItem(index)}
+                                            class="text-red-400 hover:text-red-300 text-xs"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span class="text-xs text-gray-400">Assign to:</span>
+                                        {#each allMembers as member}
+                                            <label class="flex items-center gap-1">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.assignedTo.includes(member.id)}
+                                                    on:change={() => toggleItemAssignment(index, member.id)}
+                                                    class="w-3 h-3 text-primary bg-dark border-dark-100 rounded"
+                                                />
+                                                <span class="text-xs text-gray-300">{getMemberName(member)}</span>
+                                            </label>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                        <div class="mt-2 text-xs text-gray-400">
+                            Auto-calculated from items. Assignments update split shares.
+                        </div>
+                    </div>
+                {/if}
+                
                 <div class="flex gap-2">
                     <button
                         type="submit"
