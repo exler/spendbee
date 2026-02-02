@@ -101,6 +101,34 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
+        update: (
+            id: number,
+            data: {
+                description?: string;
+                note?: string;
+                amount?: number;
+                currency?: string;
+                createdAt?: string;
+                paidBy?: number;
+                sharedWith?: number[];
+                receiptImageUrl?: string;
+                receiptItems?: Array<{
+                    description: string;
+                    quantity: number;
+                    price: number;
+                    assignedTo?: number[];
+                }>;
+                customShares?: Array<{ memberId: number; amount: number }>;
+            },
+        ) =>
+            fetchAPI(`/expenses/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify(data),
+            }),
+        delete: (id: number) =>
+            fetchAPI(`/expenses/${id}`, {
+                method: "DELETE",
+            }),
         analyzeReceipt: (data: { groupId: number; image: string }) =>
             fetchAPI("/expenses/analyze-receipt", {
                 method: "POST",

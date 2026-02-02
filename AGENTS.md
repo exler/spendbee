@@ -76,6 +76,8 @@ spendbee/
 
 ### Expenses
 - `POST /api/expenses` - Create new expense
+- `PATCH /api/expenses/:id` - Update existing expense (all group members can edit)
+- `DELETE /api/expenses/:id` - Delete expense (all group members can delete)
 - `POST /api/expenses/analyze-receipt` - AI-powered receipt OCR
 - `GET /api/expenses/group/:groupId` - List group expenses
 - `GET /api/expenses/group/:groupId/balances` - Calculate balances

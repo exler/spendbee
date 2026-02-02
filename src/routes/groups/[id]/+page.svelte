@@ -113,6 +113,10 @@
     let scanningReceipt = false;
     let showReceiptPreview: number | null = null;
 
+    // Edit expense variables
+    let showEditExpense = false;
+    let editingExpenseId: number | null = null;
+
     onMount(() => {
         if (!$user) {
             goto("/login");
@@ -172,17 +176,7 @@
                 receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
                 customShares: customSharesArray,
             });
-            expenseDescription = "";
-            expenseNote = "";
-            expenseAmount = "";
-            expenseDate = "";
-            expensePaidBy = 0;
-            selectedMembers = [];
-            splitEvenly = true;
-            customShares = {};
-            receiptImage = null;
-            receiptImageUrl = null;
-            receiptItems = [];
+            resetExpenseForm();
             showAddExpense = false;
             loadGroupData();
         } catch (e) {
@@ -440,6 +434,103 @@
         if (member.name) return `${member.name} (guest)`;
         return "Unknown";
     }
+
+    function startEditExpense(expense: Expense) {
+        editingExpenseId = expense.id;
+        expenseDescription = expense.description;
+        expenseNote = expense.note || "";
+        expenseAmount = expense.amount.toString();
+        expenseCurrency = expense.currency || "EUR";
+        expenseDate = new Date(expense.createdAt).toISOString().split("T")[0];
+        expensePaidBy = expense.paidBy;
+        selectedMembers = expense.shares.map((s) => s.member.id);
+        
+        // Check if shares are even
+        const shareAmount = expense.amount / expense.shares.length;
+        const allSharesEqual = expense.shares.every((s) => Math.abs(s.share - shareAmount) < 0.01);
+        
+        if (allSharesEqual) {
+            splitEvenly = true;
+            customShares = {};
+        } else {
+            splitEvenly = false;
+            customShares = {};
+            expense.shares.forEach((s) => {
+                customShares[s.member.id] = s.share.toFixed(2);
+            });
+        }
+        
+        receiptImageUrl = expense.receiptImageUrl || null;
+        if (expense.receiptItems) {
+            try {
+                receiptItems = JSON.parse(expense.receiptItems);
+            } catch {
+                receiptItems = [];
+            }
+        } else {
+            receiptItems = [];
+        }
+        
+        showEditExpense = true;
+    }
+
+    async function updateExpense() {
+        if (!expenseDescription || !expenseAmount || selectedMembers.length === 0 || !editingExpenseId) return;
+
+        try {
+            const customSharesArray = !splitEvenly
+                ? selectedMembers.map((memberId) => ({
+                      memberId,
+                      amount: Number.parseFloat(customShares[memberId] || "0"),
+                  }))
+                : undefined;
+
+            await api.expenses.update(editingExpenseId, {
+                description: expenseDescription,
+                note: expenseNote || undefined,
+                amount: Number.parseFloat(expenseAmount),
+                currency: expenseCurrency,
+                createdAt: expenseDate || undefined,
+                paidBy: expensePaidBy || undefined,
+                sharedWith: selectedMembers,
+                receiptImageUrl: receiptImageUrl || undefined,
+                receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
+                customShares: customSharesArray,
+            });
+            
+            resetExpenseForm();
+            showEditExpense = false;
+            editingExpenseId = null;
+            loadGroupData();
+        } catch (e) {
+            error = e instanceof Error ? e.message : "Failed to update expense";
+        }
+    }
+
+    async function deleteExpense(expenseId: number) {
+        if (!confirm("Are you sure you want to delete this expense?")) return;
+
+        try {
+            await api.expenses.delete(expenseId);
+            loadGroupData();
+        } catch (e) {
+            error = e instanceof Error ? e.message : "Failed to delete expense";
+        }
+    }
+
+    function resetExpenseForm() {
+        expenseDescription = "";
+        expenseNote = "";
+        expenseAmount = "";
+        expenseDate = "";
+        expensePaidBy = 0;
+        selectedMembers = [];
+        splitEvenly = true;
+        customShares = {};
+        receiptImage = null;
+        receiptImageUrl = null;
+        receiptItems = [];
+    }
 </script>
 
 <svelte:head>
@@ -587,6 +678,20 @@
                                         </div>
                                     </div>
                                 {/if}
+                                <div class="mt-3 pt-3 border-t border-dark-100 flex gap-2">
+                                    <button
+                                        on:click={() => startEditExpense(expense)}
+                                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-dark-100 transition border border-primary"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        on:click={() => deleteExpense(expense.id)}
+                                        class="flex-1 bg-dark-200 text-red-400 py-2 px-4 rounded-lg text-sm font-semibold hover:bg-dark-100 transition border border-red-400"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         {/each}
                     </div>
@@ -1373,4 +1478,196 @@
             </div>
         </div>
     {/if}
+{/if}
+
+{#if showEditExpense && group}
+    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold text-white mb-4">Edit Expense</h3>
+            <form on:submit|preventDefault={updateExpense} class="space-y-4">
+                <div>
+                    <label for="editDescription" class="block text-sm font-medium text-gray-300 mb-2"> Description </label>
+                    <input
+                        type="text"
+                        id="editDescription"
+                        bind:value={expenseDescription}
+                        required
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                        placeholder="e.g., Dinner, Groceries"
+                    />
+                </div>
+                <div>
+                    <label for="editNote" class="block text-sm font-medium text-gray-300 mb-2"> Note (optional) </label>
+                    <textarea
+                        id="editNote"
+                        bind:value={expenseNote}
+                        rows="2"
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                        placeholder="Add any additional context or details..."
+                    ></textarea>
+                </div>
+                <div>
+                    <label for="editAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
+                    <input
+                        type="number"
+                        id="editAmount"
+                        bind:value={expenseAmount}
+                        required
+                        step="0.01"
+                        min="0.01"
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                        placeholder="0.00"
+                    />
+                </div>
+                <div>
+                    <label for="editCurrency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
+                    <select
+                        id="editCurrency"
+                        bind:value={expenseCurrency}
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                    >
+                        {#each supportedCurrencies as curr}
+                            <option value={curr}>{curr}</option>
+                        {/each}
+                    </select>
+                </div>
+                <div>
+                    <label for="editExpenseDate" class="block text-sm font-medium text-gray-300 mb-2">
+                        Date (optional)
+                    </label>
+                    <input
+                        type="date"
+                        id="editExpenseDate"
+                        bind:value={expenseDate}
+                        max={new Date().toISOString().split("T")[0]}
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
+                </div>
+                <div>
+                    <label for="editPaidBy" class="block text-sm font-medium text-gray-300 mb-2"> Paid by </label>
+                    <select
+                        id="editPaidBy"
+                        bind:value={expensePaidBy}
+                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                    >
+                        <option value={0}>Me ({$user?.name})</option>
+                        {#each allMembers as member}
+                            {#if member.userId && member.userId !== $user?.id}
+                                <option value={member.id}>{getMemberName(member)}</option>
+                            {/if}
+                        {/each}
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-300"> Split with </label>
+                        <button
+                            type="button"
+                            on:click={selectAllMembers}
+                            class="text-xs text-primary hover:text-primary-400"
+                        >
+                            Select All
+                        </button>
+                    </div>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        {#each allMembers as member}
+                            <label class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedMembers.includes(member.id)}
+                                    on:change={() => toggleMember(member.id)}
+                                    class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
+                                />
+                                <span class="text-white">{getMemberName(member)}</span>
+                            </label>
+                        {/each}
+                    </div>
+                    {#if selectedMembers.length > 0}
+                        <div class="mt-3 p-3 bg-dark-200 rounded-lg">
+                            <label class="flex items-center space-x-2 mb-3">
+                                <input
+                                    type="checkbox"
+                                    bind:checked={splitEvenly}
+                                    class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
+                                />
+                                <span class="text-sm text-gray-300">Split evenly</span>
+                            </label>
+                            {#if splitEvenly}
+                                <p class="text-xs text-gray-400">
+                                    {selectedMembers.length} member(s) selected • ${formatCurrency(
+                                        parseFloat(expenseAmount || "0") / selectedMembers.length,
+                                    )} each
+                                </p>
+                            {:else}
+                                <div class="space-y-2 mb-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                        <button
+                                            type="button"
+                                            on:click={distributeEvenly}
+                                            class="text-xs text-primary hover:text-primary-400"
+                                        >
+                                            Auto-fill evenly
+                                        </button>
+                                    </div>
+                                    {#each selectedMembers as memberId}
+                                        {@const member = allMembers.find((m) => m.id === memberId)}
+                                        {#if member}
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span
+                                                >
+                                                <input
+                                                    type="number"
+                                                    bind:value={customShares[memberId]}
+                                                    step="0.01"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                />
+                                            </div>
+                                        {/if}
+                                    {/each}
+                                </div>
+                                <div class="text-xs space-y-1">
+                                    <div class="flex justify-between text-gray-400">
+                                        <span>Total allocated:</span>
+                                        <span>${formatCurrency(getCustomSharesTotal())}</span>
+                                    </div>
+                                    <div
+                                        class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                            ? 'text-green-400'
+                                            : 'text-red-400'}"
+                                    >
+                                        <span>Remaining:</span>
+                                        <span>${formatCurrency(getCustomSharesRemaining())}</span>
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        type="submit"
+                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                    >
+                        Save Changes
+                    </button>
+                    <button
+                        type="button"
+                        on:click={() => {
+                            showEditExpense = false;
+                            editingExpenseId = null;
+                            resetExpenseForm();
+                        }}
+                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 {/if}
