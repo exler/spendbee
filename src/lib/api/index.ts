@@ -22,7 +22,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
 export const api = {
     auth: {
-        register: (data: { email: string; password: string; name: string }) =>
+        register: (data: { email: string; password: string; name: string; token?: string }) =>
             fetchAPI("/auth/register", {
                 method: "POST",
                 body: JSON.stringify(data),
@@ -39,29 +39,35 @@ export const api = {
     },
     groups: {
         list: (includeArchived?: boolean) => fetchAPI(`/groups${includeArchived ? "?includeArchived=true" : ""}`),
-        get: (id: number) => fetchAPI(`/groups/${id}`),
+        get: (uuid: string) => fetchAPI(`/groups/${uuid}`),
         create: (data: { name: string; description?: string; baseCurrency?: string }) =>
             fetchAPI("/groups", {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
-        update: (id: number, data: { name?: string; description?: string; baseCurrency?: string }) =>
-            fetchAPI(`/groups/${id}`, {
+        update: (uuid: string, data: { name?: string; description?: string; baseCurrency?: string }) =>
+            fetchAPI(`/groups/${uuid}`, {
                 method: "PATCH",
                 body: JSON.stringify(data),
             }),
-        archive: (id: number, archived: boolean) =>
-            fetchAPI(`/groups/${id}/archive`, {
+        archive: (uuid: string, archived: boolean) =>
+            fetchAPI(`/groups/${uuid}/archive`, {
                 method: "PATCH",
                 body: JSON.stringify({ archived }),
             }),
-        invite: (id: number, email: string) =>
-            fetchAPI(`/groups/${id}/invite`, {
+        invite: (uuid: string, email: string) =>
+            fetchAPI(`/groups/${uuid}/invite`, {
                 method: "POST",
                 body: JSON.stringify({ email }),
             }),
-        updateCurrency: (id: number, baseCurrency: string) =>
-            fetchAPI(`/groups/${id}/currency`, {
+        invitations: (uuid: string) => fetchAPI(`/groups/${uuid}/invitations`),
+        revokeInvitation: (uuid: string, invitationId: number, type: string) =>
+            fetchAPI(`/groups/${uuid}/invitations`, {
+                method: "DELETE",
+                body: JSON.stringify({ invitationId, type }),
+            }),
+        updateCurrency: (uuid: string, baseCurrency: string) =>
+            fetchAPI(`/groups/${uuid}/currency`, {
                 method: "PATCH",
                 body: JSON.stringify({ baseCurrency }),
             }),
@@ -150,8 +156,8 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
-        list: (groupId: number) => fetchAPI(`/expenses/group/${groupId}`),
-        balances: (groupId: number) => fetchAPI(`/expenses/group/${groupId}/balances`),
+        list: (groupUuid: string) => fetchAPI(`/expenses/group/${groupUuid}`),
+        balances: (groupUuid: string) => fetchAPI(`/expenses/group/${groupUuid}/balances`),
         settle: (data: {
             groupId: number;
             fromMemberId: number;
@@ -163,17 +169,17 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
-        settlements: (groupId: number) => fetchAPI(`/expenses/group/${groupId}/settlements`),
+        settlements: (groupUuid: string) => fetchAPI(`/expenses/group/${groupUuid}/settlements`),
     },
     members: {
-        create: (groupId: number, data: { name: string }) =>
-            fetchAPI(`/groups/${groupId}/members`, {
+        create: (groupUuid: string, data: { name: string }) =>
+            fetchAPI(`/groups/${groupUuid}/members`, {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
-        list: (groupId: number) => fetchAPI(`/groups/${groupId}/members`),
-        delete: (groupId: number, memberId: number) =>
-            fetchAPI(`/groups/${groupId}/members/${memberId}`, {
+        list: (groupUuid: string) => fetchAPI(`/groups/${groupUuid}/members`),
+        delete: (groupUuid: string, memberId: number) =>
+            fetchAPI(`/groups/${groupUuid}/members/${memberId}`, {
                 method: "DELETE",
             }),
     },

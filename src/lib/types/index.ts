@@ -7,6 +7,7 @@ export interface User {
 
 export interface Group {
     id: number;
+    uuid: string;
     name: string;
     description: string | null;
     createdBy: number;

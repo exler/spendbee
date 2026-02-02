@@ -19,6 +19,7 @@
 
     interface Group {
         id: number;
+        uuid: string;
         name: string;
         description: string | null;
         baseCurrency?: string;
@@ -65,9 +66,23 @@
         createdAt: Date;
     }
 
-    let groupId: number;
+    interface PendingInvitation {
+        id: number;
+        email: string;
+        type: "notification" | "token";
+        invitedBy: {
+            id: number;
+            name: string;
+            email: string;
+        };
+        createdAt: Date;
+    }
+
+    let groupUuid: string;
+    let groupId: number; // Internal database ID, still used for creating expenses/settlements
     let group: Group | null = null;
     let allMembers: GroupMember[] = [];
+    let pendingInvitations: PendingInvitation[] = [];
     let expenses: Expense[] = [];
     let balances: Balance[] = [];
     let settlements: Settlement[] = [];
@@ -119,7 +134,6 @@
     // Attachment variables
     let expenseAttachments: Array<{ url: string; name: string; type: string }> = [];
     let uploadingAttachment = false;
-    let additionalReceiptFiles: Array<{ data: string; name: string }> = [];
     let previewImageUrl: string | null = null;
 
     // Edit expense variables
@@ -131,22 +145,24 @@
             goto("/login");
             return;
         }
-        groupId = Number.parseInt(page.params.id);
+        groupUuid = page.params.id!;
         loadGroupData();
     });
 
     async function loadGroupData() {
         loading = true;
         try {
-            [group, allMembers, expenses, balances, settlements, supportedCurrencies] = await Promise.all([
-                api.groups.get(groupId),
-                api.members.list(groupId),
-                api.expenses.list(groupId),
-                api.expenses.balances(groupId),
-                api.expenses.settlements(groupId),
+            [group, allMembers, pendingInvitations, expenses, balances, settlements, supportedCurrencies] = await Promise.all([
+                api.groups.get(groupUuid),
+                api.members.list(groupUuid),
+                api.groups.invitations(groupUuid),
+                api.expenses.list(groupUuid),
+                api.expenses.balances(groupUuid),
+                api.expenses.settlements(groupUuid),
                 api.groups.currencies().then((res) => res.currencies),
             ]);
             if (group) {
+                groupId = group.id; // Set the internal numeric ID
                 expenseCurrency = group.baseCurrency || "EUR";
                 settleCurrency = group.baseCurrency || "EUR";
                 newBaseCurrency = group.baseCurrency || "EUR";
@@ -241,7 +257,6 @@
                 const result = await api.expenses.analyzeReceipt({
                     groupId,
                     image: imageData,
-                    additionalFiles: additionalReceiptFiles.length > 0 ? additionalReceiptFiles : undefined,
                 });
 
                 expenseDescription = result.businessName || "Receipt";
@@ -275,44 +290,6 @@
             }
         };
         reader.readAsDataURL(file);
-    }
-
-    async function handleAdditionalReceiptFiles(event: Event) {
-        const input = event.target as HTMLInputElement;
-        const files = input.files;
-        if (!files || files.length === 0) return;
-
-        const allowedTypes = [
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-            "application/pdf",
-            "text/csv",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ];
-
-        for (let i = 0; i < files.length && additionalReceiptFiles.length < 4; i++) {
-            const file = files[i];
-            
-            if (!allowedTypes.includes(file.type)) {
-                error = `File ${file.name} has unsupported type`;
-                continue;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = e.target?.result as string;
-                additionalReceiptFiles = [
-                    ...additionalReceiptFiles,
-                    { data, name: file.name },
-                ];
-            };
-            reader.readAsDataURL(file);
-        }
     }
 
     async function handleAttachmentUpload(event: Event) {
@@ -379,10 +356,6 @@
         expenseAttachments = expenseAttachments.filter((_, i) => i !== index);
     }
 
-    function removeAdditionalReceiptFile(index: number) {
-        additionalReceiptFiles = additionalReceiptFiles.filter((_, i) => i !== index);
-    }
-
     function handleImagePreview(attachment: { url: string; name: string; type: string }) {
         previewImageUrl = attachment.url;
     }
@@ -441,7 +414,7 @@
         if (!newGuestMemberName) return;
 
         try {
-            await api.members.create(groupId, {
+            await api.members.create(groupUuid, {
                 name: newGuestMemberName,
             });
             newGuestMemberName = "";
@@ -456,15 +429,15 @@
         if (!inviteEmail) return;
 
         try {
-            await api.groups.invite(groupId, inviteEmail);
+            await api.groups.invite(groupUuid, inviteEmail);
             inviteEmail = "";
             showInviteMember = false;
             error = "";
             // Show success message
             const successMsg = error;
-            error = "✓ Invitation sent successfully!";
+            error = "Invitation sent successfully!";
             setTimeout(() => {
-                if (error === "✓ Invitation sent successfully!") error = "";
+                if (error === "Invitation sent successfully!") error = "";
             }, 3000);
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to send invitation";
@@ -475,10 +448,21 @@
         if (!confirm("Are you sure? This will remove all their expense shares and settlements.")) return;
 
         try {
-            await api.members.delete(groupId, memberId);
+            await api.members.delete(groupUuid, memberId);
             loadGroupData();
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to delete guest member";
+        }
+    }
+
+    async function revokeInvitation(invitationId: number, type: string) {
+        if (!confirm("Are you sure you want to revoke this invitation?")) return;
+
+        try {
+            await api.groups.revokeInvitation(groupUuid, invitationId, type);
+            loadGroupData();
+        } catch (e) {
+            error = e instanceof Error ? e.message : "Failed to revoke invitation";
         }
     }
 
@@ -486,7 +470,7 @@
         if (!newBaseCurrency) return;
 
         try {
-            await api.groups.updateCurrency(groupId, newBaseCurrency);
+            await api.groups.updateCurrency(groupUuid, newBaseCurrency);
             showChangeCurrency = false;
             loadGroupData();
         } catch (e) {
@@ -501,7 +485,7 @@
         }
 
         try {
-            await api.groups.update(groupId, {
+            await api.groups.update(groupUuid, {
                 name: editGroupName,
                 description: editGroupDescription || undefined,
                 baseCurrency: editGroupCurrency,
@@ -531,7 +515,7 @@
         }
 
         try {
-            await api.groups.archive(groupId, newArchivedState);
+            await api.groups.archive(groupUuid, newArchivedState);
             loadGroupData();
         } catch (e) {
             error = e instanceof Error ? e.message : `Failed to ${action} group`;
@@ -698,7 +682,6 @@
         receiptImageUrl = null;
         receiptItems = [];
         expenseAttachments = [];
-        additionalReceiptFiles = [];
     }
 </script>
 
@@ -710,7 +693,10 @@
     <div class="max-w-4xl mx-auto p-4">
         <div class="mb-6">
             <a href="/groups" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm">
-                <span>‹</span> Back to Groups
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Groups
             </a>
         </div>
 
@@ -1025,6 +1011,42 @@
                 </div>
 
                 <div class="space-y-4">
+                    {#if pendingInvitations.length > 0}
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Pending Invitations</h3>
+                            <div class="space-y-2">
+                                {#each pendingInvitations as invitation}
+                                    <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <div class="font-semibold text-white">
+                                                    {invitation.email}
+                                                </div>
+                                                <div class="text-sm text-gray-400">
+                                                    Invited by {invitation.invitedBy.name}
+                                                    {#if invitation.type === "token"}
+                                                        • New user
+                                                    {:else}
+                                                        • Existing user
+                                                    {/if}
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    {formatDate(invitation.createdAt)}
+                                                </div>
+                                            </div>
+                                            <button
+                                                on:click={() => revokeInvitation(invitation.id, invitation.type)}
+                                                class="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                                Revoke
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
+
                     <div>
                         <h3 class="text-lg font-semibold text-white mb-3">All Members</h3>
                         <div class="space-y-2">
@@ -1310,7 +1332,9 @@
                                                 on:click={() => deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
-                                                ✕
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
                                             </button>
                                         </div>
                                         <div>
@@ -1381,7 +1405,9 @@
                                             on:click={() => deleteReceiptItem(index)}
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
-                                            ✕
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
                                         </button>
                                     </div>
                                     
@@ -1725,7 +1751,7 @@
         <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
             <h3 class="text-2xl font-bold text-white mb-4">Scan Receipt</h3>
             <p class="text-sm text-gray-400 mb-4">
-                Upload a photo of your receipt and we'll automatically extract the items and amounts.
+                Upload a photo of your receipt and we'll automatically extract the items and amounts. You can add additional attachments after the receipt is analyzed.
             </p>
             <div class="space-y-4">
                 <div>
@@ -1742,7 +1768,10 @@
                             </div>
                         {:else}
                             <div class="flex flex-col items-center gap-2">
-                                <span class="text-4xl">📷</span>
+                                <svg class="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
                                 <span class="text-gray-300">Click to upload receipt image</span>
                                 <span class="text-xs text-gray-400">JPG, PNG, or HEIC</span>
                             </div>
@@ -1756,48 +1785,6 @@
                             class="hidden"
                         />
                     </label>
-                </div>
-                <!-- Additional Files Section -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-300">
-                            Additional Files ({additionalReceiptFiles.length}/4)
-                        </label>
-                        {#if additionalReceiptFiles.length < 4}
-                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
-                                + Add Files
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.csv,.xlsx,.xls,.doc,.docx"
-                                    on:change={handleAdditionalReceiptFiles}
-                                    class="hidden"
-                                />
-                            </label>
-                        {/if}
-                    </div>
-                    {#if additionalReceiptFiles.length > 0}
-                        <div class="flex flex-wrap gap-2">
-                            {#each additionalReceiptFiles as file, index}
-                                <div class="relative group">
-                                    <div class="px-3 py-2 bg-dark-200 rounded border border-dark-100 text-xs text-gray-300">
-                                        {file.name}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        on:click={() => removeAdditionalReceiptFile(index)}
-                                        class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            {/each}
-                        </div>
-                    {:else}
-                        <p class="text-xs text-gray-400">
-                            Optionally attach up to 4 additional files (PDFs, spreadsheets, documents)
-                        </p>
-                    {/if}
                 </div>
                 <div class="flex gap-2">
                     <button
@@ -2114,7 +2101,9 @@
                                                 on:click={() => deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
-                                                ✕
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
                                             </button>
                                         </div>
                                         <div>
@@ -2185,7 +2174,9 @@
                                             on:click={() => deleteReceiptItem(index)}
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
-                                            ✕
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
                                         </button>
                                     </div>
                                     

@@ -17,8 +17,7 @@
 <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300">
     <div class="text-center max-w-md w-full">
         <div class="mb-8">
-            <h1 class="text-6xl font-bold text-primary mb-2">🐝</h1>
-            <h2 class="text-4xl font-bold text-primary mb-2">Spendbee</h2>
+            <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-48 h-48 mx-auto mb-4" />
             <p class="text-gray-300">Split bills and track expenses with friends</p>
         </div>
 
@@ -41,19 +40,27 @@
             <h3 class="text-xl font-semibold text-primary">Features</h3>
             <ul class="space-y-2 text-gray-300">
                 <li class="flex items-start">
-                    <span class="text-primary mr-2">✓</span>
+                    <svg class="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span>Create and join groups with friends</span>
                 </li>
                 <li class="flex items-start">
-                    <span class="text-primary mr-2">✓</span>
+                    <svg class="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span>Track expenses and split bills easily</span>
                 </li>
                 <li class="flex items-start">
-                    <span class="text-primary mr-2">✓</span>
+                    <svg class="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span>See who owes what at a glance</span>
                 </li>
                 <li class="flex items-start">
-                    <span class="text-primary mr-2">✓</span>
+                    <svg class="w-5 h-5 text-primary mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span>Record payments to settle debts</span>
                 </li>
             </ul>

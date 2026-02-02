@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
+import { page } from "$app/stores";
 import { user } from "$lib/stores/auth";
 import { api } from "$lib/api";
 
@@ -15,7 +16,14 @@ async function handleLogin() {
     try {
         const response = await api.auth.login({ email, password });
         user.set(response.user);
-        goto("/groups");
+        
+        // Check if there's a redirect URL (e.g., from invitation email)
+        const redirectUrl = $page.url.searchParams.get("redirect");
+        if (redirectUrl) {
+            goto(redirectUrl);
+        } else {
+            goto("/groups");
+        }
     } catch (e) {
         error = e instanceof Error ? e.message : "Login failed";
     } finally {
@@ -32,7 +40,7 @@ async function handleLogin() {
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="/" class="inline-block">
-                <h1 class="text-4xl font-bold text-primary">🐝 Spendbee</h1>
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-32 h-32 mx-auto" />
             </a>
             <h2 class="text-2xl font-semibold text-white mt-4">Login</h2>
         </div>
@@ -76,9 +84,9 @@ async function handleLogin() {
                 {loading ? "Logging in..." : "Login"}
             </button>
 
-            <p class="text-center text-gray-400">
-                Don't have an account?
-                <a href="/register" class="text-primary hover:text-primary-400">Register</a>
+            <p class="text-center text-gray-400 text-sm">
+                Don't have an account? Registration is by invitation only.
+                <br />Ask an existing member to invite you!
             </p>
         </form>
     </div>

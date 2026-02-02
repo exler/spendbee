@@ -9,11 +9,11 @@ export const PATCH = async (event: RequestEvent) => {
     if (authError) return authError;
 
     const userId = event.locals.userId;
-    const groupId = Number.parseInt(event.params.id!);
+    const groupUuid = event.params.id!;
 
     try {
         const group = await db.query.groups.findFirst({
-            where: eq(groups.id, groupId),
+            where: eq(groups.uuid, groupUuid),
         });
 
         if (!group) {
@@ -31,7 +31,7 @@ export const PATCH = async (event: RequestEvent) => {
             return json({ error: "archived field must be a boolean" }, { status: 400 });
         }
 
-        await db.update(groups).set({ archived }).where(eq(groups.id, groupId));
+        await db.update(groups).set({ archived }).where(eq(groups.uuid, groupUuid));
 
         return json({ success: true, archived });
     } catch (error) {

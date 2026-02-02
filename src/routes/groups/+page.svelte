@@ -7,6 +7,7 @@
 
     interface Group {
         id: number;
+        uuid: string;
         name: string;
         description: string | null;
         createdBy: number;
@@ -98,8 +99,8 @@
             const result = await api.notifications.accept(notificationId);
             await loadNotifications();
             await loadGroups();
-            if (result.groupId) {
-                goto(`/groups/${result.groupId}`);
+            if (result.groupUuid) {
+                goto(`/groups/${result.groupUuid}`);
             }
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to accept invitation";
@@ -137,9 +138,11 @@
 <div class="min-h-screen bg-gradient-to-b from-dark to-dark-300">
     <div class="max-w-4xl mx-auto p-4">
         <div class="flex items-center justify-between mb-8 pt-4">
-            <div>
-                <h1 class="text-3xl font-bold text-primary">🐝 Spendbee</h1>
-                <p class="text-gray-300">Welcome, {$user?.name}</p>
+            <div class="flex items-center gap-4">
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-16 h-16" />
+                <div>
+                    <p class="text-gray-300">Welcome, {$user?.name}</p>
+                </div>
             </div>
             <div class="flex items-center gap-3">
                 <div class="relative">
@@ -147,7 +150,9 @@
                         on:click={() => (showNotifications = !showNotifications)}
                         class="relative px-4 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition"
                     >
-                        🔔
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
                         {#if $unreadCount > 0}
                             <span
                                 class="absolute -top-1 -right-1 bg-primary text-dark text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
@@ -257,7 +262,7 @@
             <div class="space-y-3">
                 {#each groups as group}
                     <a
-                        href="/groups/{group.id}"
+                        href="/groups/{group.uuid}"
                         class="block bg-dark-300 p-4 rounded-lg hover:bg-dark-200 transition border border-dark-100 hover:border-primary {group.archived ? 'opacity-60' : ''}"
                     >
                         <div class="flex items-start justify-between">
@@ -274,20 +279,24 @@
                                     <p class="text-gray-400 mt-1">{group.description}</p>
                                 {/if}
                             </div>
-                            {#if group.userBalance !== undefined && Math.abs(group.userBalance) >= 0.01}
+                            {#if group.userBalance !== undefined}
                                 <div class="ml-4 text-right">
-                                    {#if group.userBalance > 0}
-                                        <div class="text-sm text-gray-400">you are owed</div>
-                                        <div class="text-lg font-semibold text-green-400">
-                                            +{group.userBalance.toFixed(2)}
-                                            {group.baseCurrency || "EUR"}
-                                        </div>
+                                    {#if Math.abs(group.userBalance) >= 0.01}
+                                        {#if group.userBalance > 0}
+                                            <div class="text-sm text-gray-400">you are owed</div>
+                                            <div class="text-lg font-semibold text-green-400">
+                                                +{group.userBalance.toFixed(2)}
+                                                {group.baseCurrency || "EUR"}
+                                            </div>
+                                        {:else}
+                                            <div class="text-sm text-gray-400">you owe</div>
+                                            <div class="text-lg font-semibold text-red-400">
+                                                {group.userBalance.toFixed(2)}
+                                                {group.baseCurrency || "EUR"}
+                                            </div>
+                                        {/if}
                                     {:else}
-                                        <div class="text-sm text-gray-400">you owe</div>
-                                        <div class="text-lg font-semibold text-red-400">
-                                            {group.userBalance.toFixed(2)}
-                                            {group.baseCurrency || "EUR"}
-                                        </div>
+                                        <div class="text-sm font-semibold text-gray-400">All settled up</div>
                                     {/if}
                                 </div>
                             {/if}

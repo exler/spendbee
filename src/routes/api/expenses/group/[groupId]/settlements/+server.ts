@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { groupMembers, settlements } from "$lib/server/db/schema";
+import { groupMembers, groups, settlements } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
@@ -10,10 +10,19 @@ export const GET: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.groupId);
+    const groupUuid = event.params.groupId;
+
+    // First, find the group by UUID to get its ID
+    const group = await db.query.groups.findFirst({
+        where: eq(groups.uuid, groupUuid),
+    });
+
+    if (!group) {
+        return json({ error: "Group not found" }, { status: 404 });
+    }
 
     const membership = await db.query.groupMembers.findFirst({
-        where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
+        where: and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)),
     });
 
     if (!membership) {
@@ -21,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const groupSettlements = await db.query.settlements.findMany({
-        where: eq(settlements.groupId, groupId),
+        where: eq(settlements.groupId, group.id),
         with: {
             fromMember: {
                 with: {

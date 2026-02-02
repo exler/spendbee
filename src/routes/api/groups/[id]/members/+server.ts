@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { groupMembers } from "$lib/server/db/schema";
+import { groupMembers, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
@@ -10,10 +10,19 @@ export const GET: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.id);
+    const groupUuid = event.params.id;
+
+    // First, find the group by UUID to get its ID
+    const group = await db.query.groups.findFirst({
+        where: eq(groups.uuid, groupUuid),
+    });
+
+    if (!group) {
+        return json({ error: "Group not found" }, { status: 404 });
+    }
 
     const membership = await db.query.groupMembers.findFirst({
-        where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
+        where: and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)),
     });
 
     if (!membership) {
@@ -21,7 +30,7 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const members = await db.query.groupMembers.findMany({
-        where: eq(groupMembers.groupId, groupId),
+        where: eq(groupMembers.groupId, group.id),
         with: {
             user: {
                 columns: {
@@ -41,11 +50,20 @@ export const POST: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.id);
+    const groupUuid = event.params.id;
 
     try {
+        // First, find the group by UUID to get its ID
+        const group = await db.query.groups.findFirst({
+            where: eq(groups.uuid, groupUuid),
+        });
+
+        if (!group) {
+            return json({ error: "Group not found" }, { status: 404 });
+        }
+
         const membership = await db.query.groupMembers.findFirst({
-            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
+            where: and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)),
         });
 
         if (!membership) {
@@ -62,7 +80,7 @@ export const POST: RequestHandler = async (event) => {
         const [member] = await db
             .insert(groupMembers)
             .values({
-                groupId: groupId,
+                groupId: group.id,
                 userId: null,
                 name: name,
                 joinedAt: new Date(),

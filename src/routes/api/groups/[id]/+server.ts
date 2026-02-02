@@ -10,18 +10,11 @@ export const GET: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.id);
+    const groupUuid = event.params.id;
 
-    const membership = await db.query.groupMembers.findFirst({
-        where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
-    });
-
-    if (!membership) {
-        return json({ error: "Not a member of this group" }, { status: 403 });
-    }
-
+    // First, find the group by UUID to get its ID
     const group = await db.query.groups.findFirst({
-        where: eq(groups.id, groupId),
+        where: eq(groups.uuid, groupUuid),
         with: {
             creator: {
                 columns: {
@@ -44,6 +37,18 @@ export const GET: RequestHandler = async (event) => {
         },
     });
 
+    if (!group) {
+        return json({ error: "Group not found" }, { status: 404 });
+    }
+
+    const membership = await db.query.groupMembers.findFirst({
+        where: and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)),
+    });
+
+    if (!membership) {
+        return json({ error: "Not a member of this group" }, { status: 403 });
+    }
+
     return json(group);
 };
 
@@ -52,11 +57,11 @@ export const PATCH: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId;
-    const groupId = Number.parseInt(event.params.id);
+    const groupUuid = event.params.id;
 
     try {
         const group = await db.query.groups.findFirst({
-            where: eq(groups.id, groupId),
+            where: eq(groups.uuid, groupUuid),
         });
 
         if (!group) {
@@ -73,7 +78,7 @@ export const PATCH: RequestHandler = async (event) => {
         if (body.description !== undefined) updates.description = body.description;
         if (body.baseCurrency !== undefined) updates.baseCurrency = body.baseCurrency;
 
-        await db.update(groups).set(updates).where(eq(groups.id, groupId));
+        await db.update(groups).set(updates).where(eq(groups.uuid, groupUuid));
 
         return json({ success: true });
     } catch (error) {

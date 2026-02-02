@@ -10,11 +10,11 @@ export const PATCH: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.id);
+    const groupUuid = event.params.id;
 
     try {
         const group = await db.query.groups.findFirst({
-            where: eq(groups.id, groupId),
+            where: eq(groups.uuid, groupUuid),
         });
 
         if (!group) {
@@ -26,7 +26,7 @@ export const PATCH: RequestHandler = async (event) => {
         }
 
         const body = await event.request.json();
-        await db.update(groups).set({ baseCurrency: body.baseCurrency }).where(eq(groups.id, groupId));
+        await db.update(groups).set({ baseCurrency: body.baseCurrency }).where(eq(groups.uuid, groupUuid));
 
         return json({ success: true });
     } catch (error) {

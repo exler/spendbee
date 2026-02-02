@@ -12,29 +12,30 @@ export const GET: RequestHandler = async (event) => {
     if (authError) return authError;
 
     const userId = event.locals.userId!;
-    const groupId = Number.parseInt(event.params.groupId);
+    const groupUuid = event.params.groupId;
 
-    const membership = await db.query.groupMembers.findFirst({
-        where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
-    });
-
-    if (!membership) {
-        return json({ error: "Not a member of this group" }, { status: 403 });
-    }
-
+    // First, find the group by UUID to get its ID
     const group = await db.query.groups.findFirst({
-        where: eq(groups.id, groupId),
+        where: eq(groups.uuid, groupUuid),
     });
 
     if (!group) {
         return json({ error: "Group not found" }, { status: 404 });
     }
 
+    const membership = await db.query.groupMembers.findFirst({
+        where: and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)),
+    });
+
+    if (!membership) {
+        return json({ error: "Not a member of this group" }, { status: 403 });
+    }
+
     const baseCurrency = group.baseCurrency || "EUR";
     const rates = await getExchangeRates();
 
     const members = await db.query.groupMembers.findMany({
-        where: eq(groupMembers.groupId, groupId),
+        where: eq(groupMembers.groupId, group.id),
         with: {
             user: {
                 columns: {
@@ -51,7 +52,7 @@ export const GET: RequestHandler = async (event) => {
         const paidExpenses = await db
             .select({ amount: expenses.amount, currency: expenses.currency })
             .from(expenses)
-            .where(and(eq(expenses.groupId, groupId), eq(expenses.paidBy, member.id)));
+            .where(and(eq(expenses.groupId, group.id), eq(expenses.paidBy, member.id)));
 
         const owedExpenses = await db
             .select({
@@ -60,17 +61,17 @@ export const GET: RequestHandler = async (event) => {
             })
             .from(expenseShares)
             .innerJoin(expenses, eq(expenseShares.expenseId, expenses.id))
-            .where(and(eq(expenses.groupId, groupId), eq(expenseShares.memberId, member.id)));
+            .where(and(eq(expenses.groupId, group.id), eq(expenseShares.memberId, member.id)));
 
         const settlementsFrom = await db
             .select({ amount: settlements.amount, currency: settlements.currency })
             .from(settlements)
-            .where(and(eq(settlements.groupId, groupId), eq(settlements.fromMemberId, member.id)));
+            .where(and(eq(settlements.groupId, group.id), eq(settlements.fromMemberId, member.id)));
 
         const settlementsTo = await db
             .select({ amount: settlements.amount, currency: settlements.currency })
             .from(settlements)
-            .where(and(eq(settlements.groupId, groupId), eq(settlements.toMemberId, member.id)));
+            .where(and(eq(settlements.groupId, group.id), eq(settlements.toMemberId, member.id)));
 
         const balanceByCurrency: { [key: string]: number } = {};
 

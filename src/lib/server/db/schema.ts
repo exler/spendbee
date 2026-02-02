@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { randomUUID } from "node:crypto";
 
 export const users = sqliteTable("users", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -11,19 +12,29 @@ export const users = sqliteTable("users", {
         .$defaultFn(() => new Date()),
 });
 
-export const groups = sqliteTable("groups", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    name: text("name").notNull(),
-    description: text("description"),
-    baseCurrency: text("base_currency").default("EUR"),
-    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
-    createdBy: integer("created_by")
-        .notNull()
-        .references(() => users.id),
-    createdAt: integer("created_at", { mode: "timestamp" })
-        .notNull()
-        .$defaultFn(() => new Date()),
-});
+export const groups = sqliteTable(
+    "groups",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        uuid: text("uuid")
+            .notNull()
+            .unique()
+            .$defaultFn(() => randomUUID()),
+        name: text("name").notNull(),
+        description: text("description"),
+        baseCurrency: text("base_currency").default("EUR"),
+        archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+        createdBy: integer("created_by")
+            .notNull()
+            .references(() => users.id),
+        createdAt: integer("created_at", { mode: "timestamp" })
+            .notNull()
+            .$defaultFn(() => new Date()),
+    },
+    (table) => ({
+        uuidIdx: index("groups_uuid_idx").on(table.uuid),
+    }),
+);
 
 export const groupMembers = sqliteTable("group_members", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -101,6 +112,33 @@ export const notifications = sqliteTable("notifications", {
         .$defaultFn(() => new Date()),
 });
 
+export const invitationTokens = sqliteTable(
+    "invitation_tokens",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        token: text("token")
+            .notNull()
+            .unique()
+            .$defaultFn(() => randomUUID()),
+        email: text("email").notNull(),
+        groupId: integer("group_id")
+            .notNull()
+            .references(() => groups.id, { onDelete: "cascade" }),
+        invitedBy: integer("invited_by")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        used: integer("used", { mode: "boolean" }).notNull().default(false),
+        expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+        createdAt: integer("created_at", { mode: "timestamp" })
+            .notNull()
+            .$defaultFn(() => new Date()),
+    },
+    (table) => ({
+        tokenIdx: index("invitation_tokens_token_idx").on(table.token),
+        emailIdx: index("invitation_tokens_email_idx").on(table.email),
+    }),
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
     groupMembers: many(groupMembers),
     notifications: many(notifications),
@@ -169,6 +207,17 @@ export const settlementsRelations = relations(settlements, ({ one }) => ({
 export const notificationsRelations = relations(notifications, ({ one }) => ({
     user: one(users, {
         fields: [notifications.userId],
+        references: [users.id],
+    }),
+}));
+
+export const invitationTokensRelations = relations(invitationTokens, ({ one }) => ({
+    group: one(groups, {
+        fields: [invitationTokens.groupId],
+        references: [groups.id],
+    }),
+    inviter: one(users, {
+        fields: [invitationTokens.invitedBy],
         references: [users.id],
     }),
 }));
