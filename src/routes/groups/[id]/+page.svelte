@@ -1128,9 +1128,9 @@
                             </label>
                             {#if splitEvenly}
                                 <p class="text-xs text-gray-400">
-                                    {selectedMembers.length} member(s) selected • ${formatCurrency(
+                                    {selectedMembers.length} member(s) selected • {formatCurrency(
                                         parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )} each
+                                    )} {expenseCurrency} each
                                 </p>
                             {:else}
                                 <div class="space-y-2 mb-2">
@@ -1165,7 +1165,7 @@
                                 <div class="text-xs space-y-1">
                                     <div class="flex justify-between text-gray-400">
                                         <span>Total allocated:</span>
-                                        <span>${formatCurrency(getCustomSharesTotal())}</span>
+                                        <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
                                     </div>
                                     <div
                                         class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
@@ -1173,7 +1173,7 @@
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>${formatCurrency(getCustomSharesRemaining())}</span>
+                                        <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
                                     </div>
                                 </div>
                             {/if}
@@ -1596,9 +1596,9 @@
                             </label>
                             {#if splitEvenly}
                                 <p class="text-xs text-gray-400">
-                                    {selectedMembers.length} member(s) selected • ${formatCurrency(
+                                    {selectedMembers.length} member(s) selected • {formatCurrency(
                                         parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )} each
+                                    )} {expenseCurrency} each
                                 </p>
                             {:else}
                                 <div class="space-y-2 mb-2">
@@ -1633,7 +1633,7 @@
                                 <div class="text-xs space-y-1">
                                     <div class="flex justify-between text-gray-400">
                                         <span>Total allocated:</span>
-                                        <span>${formatCurrency(getCustomSharesTotal())}</span>
+                                        <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
                                     </div>
                                     <div
                                         class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
@@ -1641,7 +1641,7 @@
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>${formatCurrency(getCustomSharesRemaining())}</span>
+                                        <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
                                     </div>
                                 </div>
                             {/if}
