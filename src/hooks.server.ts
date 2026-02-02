@@ -1,7 +1,17 @@
-import type { Handle, HandleServerError } from "@sveltejs/kit";
+import type { Handle } from "@sveltejs/kit";
 import { verifyJWT } from "$lib/server/auth";
+import * as Sentry from "@sentry/sveltekit";
+import { env } from "$env/dynamic/private";
+import { sequence } from "@sveltejs/kit/hooks";
 
-export const handle: Handle = async ({ event, resolve }) => {
+if (env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: env.SENTRY_DSN,
+        tracesSampleRate: 1.0,
+    });
+}
+
+const authHandle: Handle = async ({ event, resolve }) => {
     // Check for JWT token in httpOnly cookie
     const token = event.cookies.get("token");
 
@@ -16,23 +26,6 @@ export const handle: Handle = async ({ event, resolve }) => {
     return resolve(event);
 };
 
-export const handleError: HandleServerError = async ({ error, event, status, message }) => {
-    const errorId = crypto.randomUUID();
+export const handle = sequence(Sentry.sentryHandle(), authHandle);
 
-    // Log the full error details
-    console.error(`[${status}] ${event.request.method} ${event.url.pathname}`);
-    console.error(`Error ID: ${errorId}`);
-    console.error(`Message: ${message}`);
-
-    if (error instanceof Error) {
-        console.error(`Error name: ${error.name}`);
-        console.error(`Error message: ${error.message}`);
-        console.error(`Stack trace:\n${error.stack}`);
-    } else {
-        console.error("Error object:", error);
-    }
-
-    return {
-        message: `Internal Error (ID: ${errorId})`,
-    };
-};
+export const handleError = Sentry.handleErrorWithSentry();

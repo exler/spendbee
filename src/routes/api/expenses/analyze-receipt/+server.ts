@@ -7,12 +7,14 @@ import { requireAuth } from "$lib/server/utils";
 import { analyzeReceipt } from "$lib/server/services/receipt";
 import { getReceiptKey, s3 } from "$lib/server/s3";
 import { env } from "$env/dynamic/private";
+import * as Sentry from "@sentry/sveltekit";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
     if (authError) return authError;
 
     const userId = event.locals.userId!;
+    let groupId: number | undefined;
 
     try {
         if (!env.MISTRAL_API_KEY) {
@@ -20,7 +22,8 @@ export const POST: RequestHandler = async (event) => {
         }
 
         const body = await event.request.json();
-        const { groupId, image } = body;
+        const { groupId: gId, image } = body;
+        groupId = gId;
 
         if (!groupId || !image) {
             return json({ error: "Missing required fields" }, { status: 400 });
@@ -67,6 +70,18 @@ export const POST: RequestHandler = async (event) => {
         } else {
             console.error("Error object:", JSON.stringify(error, null, 2));
         }
+
+        // Capture receipt analysis errors in Sentry
+        Sentry.captureException(error, {
+            tags: {
+                endpoint: "analyze-receipt",
+                userId: userId.toString(),
+            },
+            extra: {
+                groupId,
+            },
+        });
+
         return json({ error: error instanceof Error ? error.message : "Failed to analyze receipt" }, { status: 500 });
     }
 };
