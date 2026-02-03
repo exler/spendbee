@@ -10,6 +10,9 @@ const config = {
             dynamic_origin: true,
             development: false,
         }),
+        version: {
+            name: Date.now().toString(),
+        },
     },
 };
 

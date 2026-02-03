@@ -129,7 +129,6 @@
 
     function handleLogout() {
         logout();
-        goto("/");
     }
 </script>
 

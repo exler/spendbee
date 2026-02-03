@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { browser } from "$app/environment";
+import { goto } from "$app/navigation";
 
 interface User {
     id: number;
@@ -35,4 +36,7 @@ export async function logout() {
 
     // Clear user from store and localStorage
     user.set(null);
+
+    // Redirect to front page
+    goto("/");
 }

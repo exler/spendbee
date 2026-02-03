@@ -15,6 +15,7 @@ Spendbee helps you track bills and expenses with friends. Create groups, add exp
 - **Styling**: TailwindCSS
 - **Authentication**: JWT with HTTP-only cookies
 - **AI**: Mistral OCR for receipt scanning
+- **PWA**: Service worker with offline support for viewing balances
 
 ## Project Structure
 
@@ -39,14 +40,30 @@ spendbee/
 │   │   ├── groups/          # UI pages
 │   │   ├── login/
 │   │   └── register/
+│   ├── service-worker.ts    # PWA service worker
 │   ├── hooks.server.ts      # SvelteKit server hooks (auth middleware)
 │   └── app.d.ts             # TypeScript declarations
 ├── static/
+│   ├── site.webmanifest     # PWA manifest
 │   └── uploads/             # Receipt images
 ├── drizzle/                 # Database migrations
 ├── spendbee.db              # SQLite database file
 └── package.json
 ```
+
+## PWA & Offline Support
+
+Spendbee is a Progressive Web App that works offline:
+
+- **Service Worker** (`src/service-worker.ts`) - Caches app assets and API responses
+- **Offline Caching Strategy**:
+  - Build files and static assets: Cache-first
+  - API endpoints: Network-first with cache fallback
+  - Cached API responses: Groups, expenses, and balances
+- **Installation**: Users can install the app on mobile devices from the browser menu
+- **Offline Capabilities**: View groups, expenses, and balances when offline
+
+The service worker is automatically built and registered by SvelteKit. Cache versioning is managed via `kit.version` in `svelte.config.js`.
 
 ## Database Schema
 
