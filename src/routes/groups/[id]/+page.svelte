@@ -6,6 +6,8 @@
     import { api } from "$lib/api";
     import AttachmentPreview from "$lib/components/AttachmentPreview.svelte";
 
+    const currentYear = new Date().getFullYear();
+
     interface GroupMember {
         id: number;
         userId: number | null;
@@ -691,14 +693,18 @@
     <title>{group?.name || "Group"} - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen bg-dark-300 pb-20">
+<div class="min-h-screen bg-dark-300">
     <div class="max-w-4xl mx-auto p-4">
-        <div class="mb-6">
+        <div class="pt-4 mb-6 flex items-center justify-between">
             <a href="/groups" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Groups
+            </a>
+            <a href="/groups" class="inline-flex items-center gap-2 hover:opacity-80 transition">
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-8 h-8" />
+                <span class="text-lg font-bold text-white">Spendbee</span>
             </a>
         </div>
 
@@ -1197,6 +1203,22 @@
                 {/if}
             {/if}
         {/if}
+
+        <!-- Footer -->
+        <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
+            <p>
+                &copy; {currentYear} Kamil Marut
+                <span class="mx-2">•</span>
+                <a 
+                    href="https://github.com/exler/spendbee" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-primary hover:text-primary-400 transition"
+                >
+                    GitHub
+                </a>
+            </p>
+        </div>
     </div>
 </div>
 

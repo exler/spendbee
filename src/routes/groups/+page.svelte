@@ -5,6 +5,8 @@
     import { notifications, unreadCount } from "$lib/stores/notifications";
     import { api } from "$lib/api";
 
+    const currentYear = new Date().getFullYear();
+
     interface Group {
         id: number;
         uuid: string;
@@ -137,12 +139,17 @@
 
 <div class="min-h-screen bg-gradient-to-b from-dark to-dark-300">
     <div class="max-w-4xl mx-auto p-4">
-        <div class="flex items-center justify-between mb-8 pt-4">
-            <div class="flex items-center gap-4">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-16 h-16" />
-                <div>
-                    <p class="text-gray-300">Welcome, {$user?.name}</p>
-                </div>
+        <!-- Logo -->
+        <div class="pt-4 mb-6">
+            <a href="/groups" class="inline-flex items-center gap-3 hover:opacity-80 transition">
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-12 h-12" />
+                <span class="text-2xl font-bold text-white">Spendbee</span>
+            </a>
+        </div>
+
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <p class="text-gray-300">Welcome, {$user?.name}</p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="relative">
@@ -305,6 +312,22 @@
                 {/each}
             </div>
         {/if}
+
+        <!-- Footer -->
+        <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
+            <p>
+                &copy; {currentYear} Kamil Marut
+                <span class="mx-2">•</span>
+                <a 
+                    href="https://github.com/exler/spendbee" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-primary hover:text-primary-400 transition"
+                >
+                    GitHub
+                </a>
+            </p>
+        </div>
     </div>
 </div>
 
