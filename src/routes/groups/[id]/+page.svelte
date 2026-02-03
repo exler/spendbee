@@ -583,11 +583,11 @@
         expenseDate = new Date(expense.createdAt).toISOString().split("T")[0];
         expensePaidBy = expense.paidBy;
         selectedMembers = expense.shares.map((s) => s.member.id);
-        
+
         // Check if shares are even
         const shareAmount = expense.amount / expense.shares.length;
         const allSharesEqual = expense.shares.every((s) => Math.abs(s.share - shareAmount) < 0.01);
-        
+
         if (allSharesEqual) {
             splitEvenly = true;
             customShares = {};
@@ -598,7 +598,7 @@
                 customShares[s.member.id] = s.share.toFixed(2);
             });
         }
-        
+
         receiptImageUrl = expense.receiptImageUrl || null;
         if (expense.receiptItems) {
             try {
@@ -620,7 +620,7 @@
         } else {
             expenseAttachments = [];
         }
-        
+
         showEditExpense = true;
     }
 
@@ -648,7 +648,7 @@
                 attachments: expenseAttachments.length > 0 ? expenseAttachments : undefined,
                 customShares: customSharesArray,
             });
-            
+
             resetExpenseForm();
             showEditExpense = false;
             editingExpenseId = null;
@@ -813,14 +813,17 @@
                                         <h3 class="text-xl font-bold text-white mb-1">
                                             {expense.description}
                                         </h3>
-                                        <p class="text-sm text-gray-400">
-                                            {#if expense.note}
+                                        {#if expense.note}
+                                            <p class="text-sm text-gray-400">
                                                 {expense.note}
-                                            {/if}
-                                        </p>
+                                            </p>
+                                        {/if}
                                         <p class="text-sm text-gray-400 {expense.note ? 'mt-1' : ''}">
                                             Paid by {getMemberName(expense.payer)}
                                         </p>
+                                        <div class="text-sm text-gray-400 mb-3">
+                                            Split with: {expense.shares.map((s) => getMemberName(s.member)).join(", ")}
+                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-2xl font-bold text-primary mb-0.5">
@@ -836,51 +839,53 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-sm text-gray-400 mb-3">
-                                    Split with: {expense.shares.map((s) => getMemberName(s.member)).join(", ")}
-                                </div>
-                                {#if expense.attachments || expense.receiptImageUrl}
-                                    <div class="mb-3">
-                                        <div class="text-xs text-gray-500 mb-2">Attachments</div>
-                                        {#if expense.attachments}
-                                            {@const parsedAttachments = JSON.parse(expense.attachments)}
-                                            <AttachmentPreview 
-                                                attachments={parsedAttachments}
-                                                onImageClick={handleImagePreview}
-                                            />
-                                        {:else if expense.receiptImageUrl}
-                                            <AttachmentPreview
-                                                attachments={[
-                                                    {
-                                                        url: expense.receiptImageUrl,
-                                                        name: "receipt.jpg",
-                                                        type: "image/jpeg",
-                                                    },
-                                                ]}
-                                                onImageClick={handleImagePreview}
-                                            />
-                                        {/if}
+
+                                <div class="flex justify-between items-end gap-4">
+                                    {#if expense.attachments || expense.receiptImageUrl}
+                                        <div class="flex-1">
+                                            <div class="text-xs text-gray-500 mb-2">Attachments</div>
+                                            {#if expense.attachments}
+                                                {@const parsedAttachments = JSON.parse(expense.attachments)}
+                                                <AttachmentPreview
+                                                    attachments={parsedAttachments}
+                                                    onImageClick={handleImagePreview}
+                                                />
+                                            {:else if expense.receiptImageUrl}
+                                                <AttachmentPreview
+                                                    attachments={[
+                                                        {
+                                                            url: expense.receiptImageUrl,
+                                                            name: "receipt.jpg",
+                                                            type: "image/jpeg",
+                                                        },
+                                                    ]}
+                                                    onImageClick={handleImagePreview}
+                                                />
+                                            {/if}
+                                        </div>
+                                    {:else}
+                                        <div class="flex-1"></div>
+                                    {/if}
+                                    <div class="flex gap-2">
+                                        <button
+                                            on:click={() => startEditExpense(expense)}
+                                            class="w-10 h-10 flex items-center justify-center bg-dark-300 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                            title="Edit"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            on:click={() => deleteExpense(expense.id)}
+                                            class="w-10 h-10 flex items-center justify-center bg-dark-300 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                            title="Delete"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                {/if}
-                                <div class="flex gap-2 justify-end">
-                                    <button
-                                        on:click={() => startEditExpense(expense)}
-                                        class="w-10 h-10 flex items-center justify-center bg-dark-300 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
-                                        title="Edit"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        on:click={() => deleteExpense(expense.id)}
-                                        class="w-10 h-10 flex items-center justify-center bg-dark-300 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
-                                        title="Delete"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                         {/each}
@@ -1385,7 +1390,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Desktop Layout: Row -->
                                     <div class="hidden md:flex gap-2 mb-2">
                                         <input
@@ -1422,7 +1427,7 @@
                                             </svg>
                                         </button>
                                     </div>
-                                    
+
                                     <div class="flex flex-wrap gap-2 mt-2">
                                         <span class="text-xs text-gray-400">Assign to:</span>
                                         {#each allMembers as member}
@@ -2067,7 +2072,7 @@
                         </div>
                     {/if}
                 </div>
-                
+
                 <!-- Receipt Image Display -->
                 {#if receiptImageUrl}
                     <div class="border border-dark-100 rounded-lg p-3">
@@ -2080,7 +2085,7 @@
                         />
                     </div>
                 {/if}
-                
+
                 <!-- Receipt Items Section -->
                 {#if receiptItems.length > 0}
                     <div class="border border-dark-100 rounded-lg p-3">
@@ -2154,7 +2159,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Desktop Layout: Row -->
                                     <div class="hidden md:flex gap-2 mb-2">
                                         <input
@@ -2191,7 +2196,7 @@
                                             </svg>
                                         </button>
                                     </div>
-                                    
+
                                     <div class="flex flex-wrap gap-2 mt-2">
                                         <span class="text-xs text-gray-400">Assign to:</span>
                                         {#each allMembers as member}
@@ -2214,7 +2219,7 @@
                         </div>
                     </div>
                 {/if}
-                
+
                 <div class="flex gap-2">
                     <button
                         type="submit"
