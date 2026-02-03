@@ -4,7 +4,6 @@ import { db } from "$lib/server/db";
 import { groupMembers, groups, expenses, expenseShares, settlements } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
-import { convertCurrency, getExchangeRates } from "$lib/server/services/currency";
 
 export const GET: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -14,7 +13,7 @@ export const GET: RequestHandler = async (event) => {
     const includeArchived = event.url.searchParams.get("includeArchived") === "true";
 
     const userGroups = await db.query.groupMembers.findMany({
-        where: eq(groupMembers.userId, userId),
+        where: eq(groupMembers.userId, userId!),
         with: {
             group: {
                 with: {
@@ -33,8 +32,6 @@ export const GET: RequestHandler = async (event) => {
     // Filter out archived groups unless explicitly requested
     const filteredGroups = includeArchived ? userGroups : userGroups.filter((gm) => !gm.group.archived);
 
-    const rates = await getExchangeRates();
-
     // Calculate user balance for each group
     const groupsWithBalance = await Promise.all(
         filteredGroups.map(async (gm) => {
@@ -49,7 +46,11 @@ export const GET: RequestHandler = async (event) => {
 
             // Amount paid by user
             const paidExpenses = await db
-                .select({ amount: expenses.amount, currency: expenses.currency })
+                .select({
+                    amount: expenses.amount,
+                    currency: expenses.currency,
+                    exchangeRate: expenses.exchangeRate,
+                })
                 .from(expenses)
                 .where(and(eq(expenses.groupId, group.id), eq(expenses.paidBy, memberId)));
 
@@ -63,6 +64,7 @@ export const GET: RequestHandler = async (event) => {
                 .select({
                     share: expenseShares.share,
                     currency: expenses.currency,
+                    exchangeRate: expenses.exchangeRate,
                 })
                 .from(expenseShares)
                 .innerJoin(expenses, eq(expenseShares.expenseId, expenses.id))
@@ -75,7 +77,11 @@ export const GET: RequestHandler = async (event) => {
 
             // Settlements to user
             const settlementsTo = await db
-                .select({ amount: settlements.amount, currency: settlements.currency })
+                .select({
+                    amount: settlements.amount,
+                    currency: settlements.currency,
+                    exchangeRate: settlements.exchangeRate,
+                })
                 .from(settlements)
                 .where(and(eq(settlements.groupId, group.id), eq(settlements.toMemberId, memberId)));
 
@@ -86,7 +92,11 @@ export const GET: RequestHandler = async (event) => {
 
             // Settlements from user
             const settlementsFrom = await db
-                .select({ amount: settlements.amount, currency: settlements.currency })
+                .select({
+                    amount: settlements.amount,
+                    currency: settlements.currency,
+                    exchangeRate: settlements.exchangeRate,
+                })
                 .from(settlements)
                 .where(and(eq(settlements.groupId, group.id), eq(settlements.fromMemberId, memberId)));
 
@@ -95,10 +105,31 @@ export const GET: RequestHandler = async (event) => {
                 balanceByCurrency[curr] = (balanceByCurrency[curr] || 0) + settlement.amount;
             }
 
-            // Convert to base currency
+            // Convert to base currency using stored exchange rates
             let userBalance = 0;
-            for (const [currency, amount] of Object.entries(balanceByCurrency)) {
-                userBalance += convertCurrency(amount, currency, baseCurrency, rates);
+
+            // Add amounts paid
+            for (const exp of paidExpenses) {
+                const amountInBase = exp.amount * (exp.exchangeRate || 1);
+                userBalance += amountInBase;
+            }
+
+            // Subtract amounts owed
+            for (const exp of owedExpenses) {
+                const shareInBase = exp.share * (exp.exchangeRate || 1);
+                userBalance -= shareInBase;
+            }
+
+            // Add settlements from user
+            for (const settlement of settlementsFrom) {
+                const amountInBase = settlement.amount * (settlement.exchangeRate || 1);
+                userBalance += amountInBase;
+            }
+
+            // Subtract settlements to user
+            for (const settlement of settlementsTo) {
+                const amountInBase = settlement.amount * (settlement.exchangeRate || 1);
+                userBalance -= amountInBase;
             }
 
             return {

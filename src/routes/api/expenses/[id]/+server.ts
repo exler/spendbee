@@ -1,8 +1,9 @@
 import { json, type RequestEvent } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
-import { expenseShares, expenses, groupMembers } from "$lib/server/db/schema";
+import { expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
+import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
 
 export const DELETE = async (event: RequestEvent) => {
     const authError = requireAuth(event);
@@ -120,6 +121,21 @@ export const PATCH = async (event: RequestEvent) => {
         if (receiptItems !== undefined) updateData.receiptItems = receiptItems ? JSON.stringify(receiptItems) : null;
         if (attachments !== undefined) updateData.attachments = attachments ? JSON.stringify(attachments) : null;
         if (createdAt !== undefined) updateData.createdAt = new Date(createdAt);
+
+        // If currency is being changed, recalculate exchange rate
+        if (currency !== undefined && currency !== expense.currency) {
+            const group = await db.query.groups.findFirst({
+                where: eq(groups.id, expense.groupId),
+            });
+
+            if (!group) {
+                return json({ error: "Group not found" }, { status: 404 });
+            }
+
+            const baseCurrency = group.baseCurrency || "EUR";
+            const rates = await getExchangeRates();
+            updateData.exchangeRate = getExchangeRate(currency, baseCurrency, rates);
+        }
 
         // Update the expense
         const [updatedExpense] = await db

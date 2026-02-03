@@ -1,9 +1,10 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { groupMembers, settlements } from "$lib/server/db/schema";
+import { groupMembers, settlements, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
+import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -36,6 +37,22 @@ export const POST: RequestHandler = async (event) => {
             );
         }
 
+        // Get group to determine base currency
+        const group = await db.query.groups.findFirst({
+            where: eq(groups.id, groupId),
+        });
+
+        if (!group) {
+            return json({ error: "Group not found" }, { status: 404 });
+        }
+
+        const baseCurrency = group.baseCurrency || "EUR";
+        const settlementCurrency = currency || "EUR";
+
+        // Fetch current exchange rates and calculate the rate to store
+        const rates = await getExchangeRates();
+        const exchangeRate = getExchangeRate(settlementCurrency, baseCurrency, rates);
+
         const [settlement] = await db
             .insert(settlements)
             .values({
@@ -43,7 +60,8 @@ export const POST: RequestHandler = async (event) => {
                 fromMemberId,
                 toMemberId,
                 amount,
-                currency: currency || "EUR",
+                currency: settlementCurrency,
+                exchangeRate,
             })
             .returning();
 

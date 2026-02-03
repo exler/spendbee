@@ -4,7 +4,6 @@ import { db } from "$lib/server/db";
 import { expenseShares, expenses, groupMembers, groups, settlements } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
-import { convertCurrency, getExchangeRates } from "$lib/server/services/currency";
 import type { Balance, CurrencyBalance } from "$lib/types";
 
 export const GET: RequestHandler = async (event) => {
@@ -32,7 +31,6 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const baseCurrency = group.baseCurrency || "EUR";
-    const rates = await getExchangeRates();
 
     const members = await db.query.groupMembers.findMany({
         where: eq(groupMembers.groupId, group.id),
@@ -50,7 +48,11 @@ export const GET: RequestHandler = async (event) => {
 
     for (const member of members) {
         const paidExpenses = await db
-            .select({ amount: expenses.amount, currency: expenses.currency })
+            .select({
+                amount: expenses.amount,
+                currency: expenses.currency,
+                exchangeRate: expenses.exchangeRate,
+            })
             .from(expenses)
             .where(and(eq(expenses.groupId, group.id), eq(expenses.paidBy, member.id)));
 
@@ -58,18 +60,27 @@ export const GET: RequestHandler = async (event) => {
             .select({
                 share: expenseShares.share,
                 currency: expenses.currency,
+                exchangeRate: expenses.exchangeRate,
             })
             .from(expenseShares)
             .innerJoin(expenses, eq(expenseShares.expenseId, expenses.id))
             .where(and(eq(expenses.groupId, group.id), eq(expenseShares.memberId, member.id)));
 
         const settlementsFrom = await db
-            .select({ amount: settlements.amount, currency: settlements.currency })
+            .select({
+                amount: settlements.amount,
+                currency: settlements.currency,
+                exchangeRate: settlements.exchangeRate,
+            })
             .from(settlements)
             .where(and(eq(settlements.groupId, group.id), eq(settlements.fromMemberId, member.id)));
 
         const settlementsTo = await db
-            .select({ amount: settlements.amount, currency: settlements.currency })
+            .select({
+                amount: settlements.amount,
+                currency: settlements.currency,
+                exchangeRate: settlements.exchangeRate,
+            })
             .from(settlements)
             .where(and(eq(settlements.groupId, group.id), eq(settlements.toMemberId, member.id)));
 
@@ -104,7 +115,44 @@ export const GET: RequestHandler = async (event) => {
 
         let balanceInBaseCurrency = 0;
         for (const [currency, amount] of Object.entries(balanceByCurrency)) {
-            balanceInBaseCurrency += convertCurrency(amount, currency, baseCurrency, rates);
+            // For now, use 1:1 conversion if currency matches base currency
+            // Otherwise we'd need to store the rate or convert using current rates
+            // Since we don't have historical rates per balance item, we'll convert using stored rates
+            if (currency === baseCurrency) {
+                balanceInBaseCurrency += amount;
+            } else {
+                // This is a simplified approach - in a real scenario, we'd need to
+                // sum up using the stored exchange rates from individual transactions
+                // For mixed currency balances, the per-currency breakdown is more accurate
+                balanceInBaseCurrency += amount; // Placeholder - will be recalculated below
+            }
+        }
+
+        // Recalculate balance in base currency using stored exchange rates
+        balanceInBaseCurrency = 0;
+
+        // Add amounts paid (converted to base currency using stored rates)
+        for (const exp of paidExpenses) {
+            const amountInBase = exp.amount * (exp.exchangeRate || 1);
+            balanceInBaseCurrency += amountInBase;
+        }
+
+        // Subtract amounts owed (converted to base currency using stored rates)
+        for (const exp of owedExpenses) {
+            const shareInBase = exp.share * (exp.exchangeRate || 1);
+            balanceInBaseCurrency -= shareInBase;
+        }
+
+        // Subtract settlements to others (converted to base currency using stored rates)
+        for (const settlement of settlementsFrom) {
+            const amountInBase = settlement.amount * (settlement.exchangeRate || 1);
+            balanceInBaseCurrency += amountInBase;
+        }
+
+        // Add settlements from others (converted to base currency using stored rates)
+        for (const settlement of settlementsTo) {
+            const amountInBase = settlement.amount * (settlement.exchangeRate || 1);
+            balanceInBaseCurrency -= amountInBase;
         }
 
         balances.push({

@@ -39,6 +39,7 @@
         note?: string;
         amount: number;
         currency?: string;
+        exchangeRate?: number;
         paidBy: number;
         createdAt: Date;
         payer: GroupMember;
@@ -63,6 +64,7 @@
         toMember: GroupMember;
         amount: number;
         currency?: string;
+        exchangeRate?: number;
         createdAt: Date;
     }
 
@@ -824,6 +826,11 @@
                                         <div class="text-2xl font-bold text-primary mb-0.5">
                                             {formatCurrency(expense.amount)} {expense.currency || "EUR"}
                                         </div>
+                                        {#if expense.currency && expense.currency !== group?.baseCurrency && expense.exchangeRate}
+                                            <div class="text-xs text-gray-500 mb-1">
+                                                @ {expense.exchangeRate.toFixed(4)} {group?.baseCurrency || "EUR"}/{expense.currency}
+                                            </div>
+                                        {/if}
                                         <div class="text-xs text-gray-400">
                                             {formatDate(expense.createdAt)}
                                         </div>
@@ -986,6 +993,11 @@
                                     <div class="text-lg font-bold text-primary">
                                         {formatCurrency(settlement.amount)}
                                         {settlement.currency || "EUR"}
+                                        {#if settlement.currency && settlement.currency !== group?.baseCurrency && settlement.exchangeRate}
+                                            <div class="text-xs text-gray-500 font-normal mt-0.5">
+                                                @ {settlement.exchangeRate.toFixed(4)} {group?.baseCurrency || "EUR"}/{settlement.currency}
+                                            </div>
+                                        {/if}
                                     </div>
                                 </div>
                             </div>

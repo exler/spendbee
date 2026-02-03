@@ -54,6 +54,26 @@ export function convertCurrency(
     return Math.round(convertedAmount * 100) / 100;
 }
 
+/**
+ * Calculates the exchange rate from one currency to another.
+ * This rate can be stored and used later for consistent conversions.
+ * @param fromCurrency - Source currency code
+ * @param toCurrency - Target currency code
+ * @param rates - Current exchange rates object
+ * @returns The exchange rate as a number
+ */
+export function getExchangeRate(fromCurrency: string, toCurrency: string, rates: ExchangeRates): number {
+    if (fromCurrency === toCurrency) {
+        return 1;
+    }
+
+    // Convert to EUR first, then to target currency
+    const rateToEur = fromCurrency === "EUR" ? 1 : 1 / rates[fromCurrency];
+    const rateFromEur = toCurrency === "EUR" ? 1 : rates[toCurrency];
+
+    return rateToEur * rateFromEur;
+}
+
 export const SUPPORTED_CURRENCIES = [
     "EUR",
     "USD",

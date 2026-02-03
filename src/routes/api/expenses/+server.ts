@@ -1,9 +1,10 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { expenseShares, expenses, groupMembers } from "$lib/server/db/schema";
+import { expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
+import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
 
 export const POST: RequestHandler = async (event) => {
     const authError = requireAuth(event);
@@ -34,12 +35,28 @@ export const POST: RequestHandler = async (event) => {
         }
 
         const membership = await db.query.groupMembers.findFirst({
-            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
+            where: and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId!)),
         });
 
         if (!membership) {
             return json({ error: "Not a member of this group" }, { status: 403 });
         }
+
+        // Get group to determine base currency
+        const group = await db.query.groups.findFirst({
+            where: eq(groups.id, groupId),
+        });
+
+        if (!group) {
+            return json({ error: "Group not found" }, { status: 404 });
+        }
+
+        const baseCurrency = group.baseCurrency || "EUR";
+        const expenseCurrency = currency || "EUR";
+
+        // Fetch current exchange rates and calculate the rate to store
+        const rates = await getExchangeRates();
+        const exchangeRate = getExchangeRate(expenseCurrency, baseCurrency, rates);
 
         // Check if group is archived
         const isArchived = await checkGroupArchived(groupId);
@@ -73,7 +90,8 @@ export const POST: RequestHandler = async (event) => {
                 description,
                 note: note || null,
                 amount,
-                currency: currency || "EUR",
+                currency: expenseCurrency,
+                exchangeRate,
                 paidBy: paidByMemberId,
                 receiptImageUrl: receiptImageUrl || null,
                 receiptItems: receiptItems ? JSON.stringify(receiptItems) : null,

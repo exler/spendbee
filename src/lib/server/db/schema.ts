@@ -57,6 +57,7 @@ export const expenses = sqliteTable("expenses", {
     note: text("note"),
     amount: real("amount").notNull(),
     currency: text("currency").default("EUR").notNull(),
+    exchangeRate: real("exchange_rate").notNull().default(1), // Rate from expense currency to group base currency at creation time
     paidBy: integer("paid_by")
         .notNull()
         .references(() => groupMembers.id, { onDelete: "cascade" }),
@@ -92,6 +93,7 @@ export const settlements = sqliteTable("settlements", {
         .references(() => groupMembers.id, { onDelete: "cascade" }),
     amount: real("amount").notNull(),
     currency: text("currency").default("EUR").notNull(),
+    exchangeRate: real("exchange_rate").notNull().default(1), // Rate from settlement currency to group base currency at creation time
     createdAt: integer("created_at", { mode: "timestamp" })
         .notNull()
         .$defaultFn(() => new Date()),

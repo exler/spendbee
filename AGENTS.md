@@ -109,3 +109,4 @@ bun run db:migrate   # Run migrations
 
 * Update the AGENTS.md whenever it feels appropriate.
 * Do not create new documentation files unless explicitly asked to.
+* Migrations should be named with a sequential number and a short description, e.g., `0005_currency_exchange_rates.sql`.
