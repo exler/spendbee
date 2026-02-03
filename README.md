@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="static/logo-1024x1024.png" width="180">
+    <img src="static/android-chrome-512x512.png" width="180">
     <h3 align="center">Spendbee</h3>
     <p align="center">🐝 A bill-splitting and expense tracking app </p>
 </p>
@@ -57,6 +57,7 @@ cp .env.example .env
 bun run db:migrate
 
 # Build the application
+bun --bun run build
 
 # Start production build
 bun --bun run build/index.js
