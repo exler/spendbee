@@ -36,16 +36,17 @@ async function handleLogin() {
     <title>Login - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300">
+<div class="min-h-screen flex items-center justify-center p-4 bg-dark-500">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="/" class="inline-block">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-32 h-32 mx-auto" />
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
             </a>
-            <h2 class="text-2xl font-semibold text-white mt-4">Login</h2>
+            <h2 class="text-3xl font-semibold text-white mt-4">Welcome back</h2>
+            <p class="text-sm text-gray-400 mt-2">Sign in to track shared expenses.</p>
         </div>
 
-        <form on:submit|preventDefault={handleLogin} class="bg-dark-300 p-6 rounded-lg shadow-lg space-y-4">
+        <form on:submit|preventDefault={handleLogin} class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100">
             {#if error}
                 <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded">
                     {error}
@@ -79,15 +80,14 @@ async function handleLogin() {
             <button
                 type="submit"
                 disabled={loading}
-                class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {loading ? "Logging in..." : "Login"}
             </button>
 
-            <p class="text-center text-gray-400 text-sm">
-                Don't have an account? Registration is by invitation only.
-                <br />Ask an existing member to invite you!
-            </p>
+            <div class="rounded-xl bg-dark-200/70 p-3 text-sm text-gray-400">
+                Invitation-only access. Ask an existing member to invite you.
+            </div>
         </form>
     </div>
 </div>

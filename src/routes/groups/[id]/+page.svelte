@@ -156,15 +156,16 @@
     async function loadGroupData() {
         loading = true;
         try {
-            [group, allMembers, pendingInvitations, expenses, balances, settlements, supportedCurrencies] = await Promise.all([
-                api.groups.get(groupUuid),
-                api.members.list(groupUuid),
-                api.groups.invitations(groupUuid),
-                api.expenses.list(groupUuid),
-                api.expenses.balances(groupUuid),
-                api.expenses.settlements(groupUuid),
-                api.groups.currencies().then((res) => res.currencies),
-            ]);
+            [group, allMembers, pendingInvitations, expenses, balances, settlements, supportedCurrencies] =
+                await Promise.all([
+                    api.groups.get(groupUuid),
+                    api.members.list(groupUuid),
+                    api.groups.invitations(groupUuid),
+                    api.expenses.list(groupUuid),
+                    api.expenses.balances(groupUuid),
+                    api.expenses.settlements(groupUuid),
+                    api.groups.currencies().then((res) => res.currencies),
+                ]);
             if (group) {
                 groupId = group.id; // Set the internal numeric ID
                 expenseCurrency = group.baseCurrency || "EUR";
@@ -175,7 +176,7 @@
                 editGroupCurrency = group.baseCurrency || "EUR";
             }
             // Set default paidBy to current user's member ID
-            const currentUserMember = allMembers.find(m => m.userId === $user?.id);
+            const currentUserMember = allMembers.find((m) => m.userId === $user?.id);
             if (currentUserMember && expensePaidBy === 0) {
                 expensePaidBy = currentUserMember.id;
             }
@@ -677,7 +678,7 @@
         expenseAmount = "";
         expenseDate = "";
         // Set default paidBy to current user's member ID
-        const currentUserMember = allMembers.find(m => m.userId === $user?.id);
+        const currentUserMember = allMembers.find((m) => m.userId === $user?.id);
         expensePaidBy = currentUserMember?.id || 0;
         selectedMembers = [];
         splitEvenly = true;
@@ -693,539 +694,807 @@
     <title>{group?.name || "Group"} - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen bg-dark-300">
-    <div class="max-w-4xl mx-auto p-4">
-        <div class="pt-4 mb-6 flex items-center justify-between">
-            <a href="/groups" class="text-gray-300 hover:text-white flex items-center gap-2 text-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Groups
-            </a>
-            <a href="/groups" class="inline-flex items-center gap-2 hover:opacity-80 transition">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-8 h-8" />
-                <span class="text-lg font-bold text-white">Spendbee</span>
-            </a>
-        </div>
-
-        {#if loading}
-            <div class="text-center py-12">
-                <div class="text-gray-400">Loading...</div>
-            </div>
-        {:else if group}
-            <div class="mb-6">
-                <div class="flex items-center gap-2 mb-2">
-                    <h1 class="text-3xl font-bold text-white">{group.name}</h1>
-                    {#if group.archived}
-                        <span class="bg-dark-100 text-gray-400 px-3 py-1 rounded text-sm">Archived</span>
-                    {/if}
-                </div>
-                {#if group.description}
-                    <p class="text-gray-400">{group.description}</p>
-                {/if}
-                <div class="mt-2 text-sm text-gray-400">
-                    {allMembers.length} members ({allMembers.filter((m) => m.userId === null).length} guests)
-                </div>
-                {#if group.archived}
-                    <div class="mt-3 bg-yellow-900/30 border border-yellow-700 text-yellow-200 p-3 rounded">
-                        This group is archived. You cannot add expenses or settle debts until it is unarchived.
-                    </div>
-                {/if}
-            </div>
-
-            {#if error}
-                <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4">
-                    {error}
-                </div>
-            {/if}
-
-            <div class="flex gap-2 mb-4 overflow-x-auto">
-                <button
-                    on:click={() => (activeTab = "expenses")}
-                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'expenses'
-                        ? 'bg-primary text-dark-300'
-                        : 'text-gray-400 hover:text-white'}"
-                >
-                    Expenses
-                </button>
-                <button
-                    on:click={() => (activeTab = "balances")}
-                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'balances'
-                        ? 'bg-primary text-dark-300'
-                        : 'text-gray-400 hover:text-white'}"
-                >
-                    Balances
-                </button>
-                <button
-                    on:click={() => (activeTab = "settlements")}
-                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'settlements'
-                        ? 'bg-primary text-dark-300'
-                        : 'text-gray-400 hover:text-white'}"
-                >
-                    Settlements
-                </button>
-                <button
-                    on:click={() => (activeTab = "members")}
-                    class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'members'
-                        ? 'bg-primary text-dark-300'
-                        : 'text-gray-400 hover:text-white'}"
-                >
-                    Members
-                </button>
-                {#if group.createdBy === $user?.id}
-                    <button
-                        on:click={() => (activeTab = "settings")}
-                        class="px-6 py-2.5 rounded-lg font-medium transition whitespace-nowrap text-sm {activeTab === 'settings'
-                            ? 'bg-primary text-dark-300'
-                            : 'text-gray-400 hover:text-white'}"
+<div class="min-h-screen bg-dark-500 text-white">
+    <div class="max-w-6xl mx-auto px-4 pb-12">
+        <div class="flex min-h-screen gap-6">
+            <aside
+                class="hidden lg:flex w-64 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+            >
+                <a href="/groups" class="inline-flex items-center gap-3">
+                    <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-10 h-10" />
+                    <span class="text-xl font-semibold">Spendbee</span>
+                </a>
+                <div class="mt-8 space-y-1 text-sm">
+                    <a
+                        href="/groups"
+                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
                     >
-                        Settings
-                    </button>
-                {/if}
-            </div>
-
-            {#if activeTab === "expenses"}
-                <div class="mb-4 flex gap-3">
-                    <button
-                        on:click={() => (showAddExpense = true)}
-                        disabled={group.archived}
-                        class="flex-1 bg-primary text-dark-300 py-3.5 px-6 rounded-xl font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        Dashboard
+                    </a>
+                    <a
+                        href="/activity"
+                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
                     >
-                        Add Expense
-                    </button>
-                    <button
-                        on:click={() => (showScanReceipt = true)}
-                        disabled={group.archived}
-                        class="flex-1 bg-dark-200 text-white py-3.5 px-6 rounded-xl font-semibold hover:bg-dark-100 transition border border-dark-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        Recent activity
+                    </a>
+                    <a
+                        href="/account"
+                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
                     >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Scan Receipt
-                    </button>
+                        Account
+                    </a>
                 </div>
-
-                {#if expenses.length === 0}
-                    <div class="text-center py-16 bg-dark-200 rounded-xl border border-dark-100">
-                        <p class="text-gray-400">No expenses yet.</p>
-                    </div>
-                {:else}
-                    <div class="space-y-3">
-                        {#each expenses as expense}
-                            <div class="bg-dark-200 p-5 rounded-xl border border-dark-100 hover:border-dark-50 transition">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div class="flex-1">
-                                        <h3 class="text-xl font-bold text-white mb-1">
-                                            {expense.description}
-                                        </h3>
-                                        {#if expense.note}
-                                            <p class="text-sm text-gray-400">
-                                                {expense.note}
-                                            </p>
-                                        {/if}
-                                        <p class="text-sm text-gray-400 {expense.note ? 'mt-1' : ''}">
-                                            Paid by {getMemberName(expense.payer)}
-                                        </p>
-                                        <div class="text-sm text-gray-400 mb-3">
-                                            Split with: {expense.shares.map((s) => getMemberName(s.member)).join(", ")}
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-2xl font-bold text-primary mb-0.5">
-                                            {formatCurrency(expense.amount)} {expense.currency || "EUR"}
-                                        </div>
-                                        {#if expense.currency && expense.currency !== group?.baseCurrency && expense.exchangeRate}
-                                            <div class="text-xs text-gray-500 mb-1">
-                                                @ {expense.exchangeRate.toFixed(4)} {group?.baseCurrency || "EUR"}/{expense.currency}
-                                            </div>
-                                        {/if}
-                                        <div class="text-xs text-gray-400">
-                                            {formatDate(expense.createdAt)}
-                                        </div>
-                                    </div>
+                {#if group}
+                    <div class="mt-10">
+                        <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Current group</div>
+                        <div class="mt-3 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="h-10 w-10 rounded-xl bg-primary text-dark flex items-center justify-center font-semibold"
+                                >
+                                    {group.name?.slice(0, 1) || "G"}
                                 </div>
-
-                                <div class="flex justify-between items-end gap-4">
-                                    {#if expense.attachments || expense.receiptImageUrl}
-                                        <div class="flex-1">
-                                            <div class="text-xs text-gray-500 mb-2">Attachments</div>
-                                            {#if expense.attachments}
-                                                {@const parsedAttachments = JSON.parse(expense.attachments)}
-                                                <AttachmentPreview
-                                                    attachments={parsedAttachments}
-                                                    onImageClick={handleImagePreview}
-                                                />
-                                            {:else if expense.receiptImageUrl}
-                                                <AttachmentPreview
-                                                    attachments={[
-                                                        {
-                                                            url: expense.receiptImageUrl,
-                                                            name: "receipt.jpg",
-                                                            type: "image/jpeg",
-                                                        },
-                                                    ]}
-                                                    onImageClick={handleImagePreview}
-                                                />
-                                            {/if}
-                                        </div>
-                                    {:else}
-                                        <div class="flex-1"></div>
-                                    {/if}
-                                    <div class="flex gap-2">
-                                        <button
-                                            on:click={() => startEditExpense(expense)}
-                                            class="w-10 h-10 flex items-center justify-center bg-dark-300 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
-                                            title="Edit"
-                                        >
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            on:click={() => deleteExpense(expense.id)}
-                                            class="w-10 h-10 flex items-center justify-center bg-dark-300 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
-                                            title="Delete"
-                                        >
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                <div>
+                                    <div class="font-semibold text-white">{group.name}</div>
+                                    <div class="text-xs text-gray-400">{allMembers.length} members</div>
                                 </div>
                             </div>
-                        {/each}
+                            <button
+                                on:click={() => (showInviteMember = true)}
+                                class="mt-4 w-full rounded-lg bg-primary text-dark py-2 text-sm font-semibold hover:bg-primary-400"
+                            >
+                                Invite friends
+                            </button>
+                        </div>
                     </div>
                 {/if}
-            {/if}
+                <div class="mt-auto text-xs text-gray-500">Split smarter together.</div>
+            </aside>
 
-            {#if activeTab === "balances"}
-                <div class="mb-4">
-                    <button
-                        on:click={() => (showSettleDebt = true)}
-                        disabled={group.archived}
-                        class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Settle Debt
-                    </button>
-                </div>
+            <main class="flex-1">
+                <div class="pt-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <a href="/groups" class="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 19l-7-7 7-7"
+                                />
+                            </svg>
+                            Back to Groups
+                        </a>
+                        <a href="/groups" class="inline-flex items-center gap-2 hover:opacity-80 transition">
+                            <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-7 h-7" />
+                            <span class="text-base font-semibold">Spendbee</span>
+                        </a>
+                    </div>
 
-                <div class="space-y-3">
-                    {#each balances as balance}
-                        <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex-1">
-                                    <div class="font-semibold text-white">{balance.memberName}</div>
-                                    {#if balance.isGuest}
-                                        <div class="text-xs text-gray-500 mb-2">Guest member</div>
+                    {#if loading}
+                        <div class="text-center py-12">
+                            <div class="text-gray-400">Loading...</div>
+                        </div>
+                    {:else if group}
+                        <div
+                            class="relative mb-6 rounded-3xl border border-dark-100/70 bg-dark-300/55 p-6 shadow-[0_0_30px_rgba(0,0,0,0.25)]"
+                        >
+                            <div class="flex flex-wrap items-start justify-between gap-6">
+                                <div class="flex flex-col gap-4">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            class="h-14 w-14 rounded-2xl bg-primary text-dark flex items-center justify-center text-2xl font-bold"
+                                        >
+                                            {group.name?.slice(0, 1) || "G"}
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h1 class="text-3xl font-bold text-white">{group.name}</h1>
+                                                {#if group.archived}
+                                                    <span
+                                                        class="bg-dark-100 text-gray-300 px-3 py-1 rounded-full text-xs uppercase tracking-[0.2em]"
+                                                    >
+                                                        Archived
+                                                    </span>
+                                                {/if}
+                                            </div>
+                                            {#if group.description}
+                                                <p class="text-gray-400 mt-1">{group.description}</p>
+                                            {/if}
+                                            <div class="mt-2 text-sm text-gray-500">
+                                                {allMembers.length} members ({allMembers.filter(
+                                                    (m) => m.userId === null,
+                                                ).length} guests)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {#if activeTab === "expenses"}
+                                        <div class="flex flex-wrap gap-2">
+                                            <button
+                                                on:click={() => (showAddExpense = true)}
+                                                disabled={group.archived}
+                                                class="rounded-xl bg-primary text-dark px-5 py-2.5 text-sm font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Add expense
+                                            </button>
+                                            <button
+                                                on:click={() => (showScanReceipt = true)}
+                                                disabled={group.archived}
+                                                class="rounded-xl border border-dark-100 bg-dark-200/80 px-5 py-2.5 text-sm font-semibold text-white hover:bg-dark-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Scan receipt
+                                            </button>
+                                        </div>
+                                    {:else if activeTab === "balances" || activeTab === "settlements"}
+                                        <div class="flex flex-wrap gap-2">
+                                            <button
+                                                on:click={() => (showSettleDebt = true)}
+                                                disabled={group.archived}
+                                                class="rounded-xl bg-primary text-dark px-5 py-2.5 text-sm font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Settle up
+                                            </button>
+                                        </div>
                                     {/if}
+                                </div>
+                            </div>
+                            <div class="absolute right-4 top-4 flex flex-col gap-2">
+                                {#if group.createdBy === $user?.id}
+                                    <button
+                                        on:click={() => (activeTab = "settings")}
+                                        class="h-10 w-10 rounded-full border border-dark-100 bg-dark-200/80 text-gray-200 hover:bg-dark-100 hover:text-white transition"
+                                        title="Settings"
+                                        aria-label="Group settings"
+                                    >
+                                        <svg
+                                            class="w-5 h-5 mx-auto"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M11.983 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm7.472-1.5a5.53 5.53 0 00-.055-.75l2.03-1.58a.5.5 0 00.12-.64l-1.92-3.32a.5.5 0 00-.6-.22l-2.39.96a5.6 5.6 0 00-1.3-.75l-.36-2.54a.5.5 0 00-.5-.42h-3.84a.5.5 0 00-.5.42l-.36 2.54a5.6 5.6 0 00-1.3.75l-2.39-.96a.5.5 0 00-.6.22l-1.92 3.32a.5.5 0 00.12.64l2.03 1.58c-.04.25-.05.5-.05.75s.02.5.05.75l-2.03 1.58a.5.5 0 00-.12.64l1.92 3.32a.5.5 0 00.6.22l2.39-.96a5.6 5.6 0 001.3.75l.36 2.54a.5.5 0 00.5.42h3.84a.5.5 0 00.5-.42l.36-2.54a5.6 5.6 0 001.3-.75l2.39.96a.5.5 0 00.6-.22l1.92-3.32a.5.5 0 00-.12-.64l-2.03-1.58c.04-.25.05-.5.05-.75z"
+                                            />
+                                        </svg>
+                                    </button>
+                                {/if}
+                                <button
+                                    on:click={() => (activeTab = "members")}
+                                    class="h-10 w-10 rounded-full border border-dark-100 bg-dark-200/80 text-gray-200 hover:bg-dark-100 hover:text-white transition"
+                                    title="Members"
+                                    aria-label="Group members"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" viewBox="0 0 24 24"
+                                        >><path
+                                            fill="currentColor"
+                                            d="M16.5 13c-1.2 0-3.07.34-4.5 1c-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25m-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22c.88-.3 1.96-.53 3.02-.53c2.44 0 5 1.21 5 1.75zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5S4 6.57 4 8.5S5.57 12 7.5 12m0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2s-2-.9-2-2s.9-2 2-2m9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5S13 6.57 13 8.5s1.57 3.5 3.5 3.5m0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2s-2-.9-2-2s.9-2 2-2"
+                                        /></svg
+                                    >
+                                </button>
+                            </div>
+                            {#if group.archived}
+                                <div
+                                    class="mt-4 bg-yellow-900/30 border border-yellow-700 text-yellow-200 p-3 rounded-lg text-sm"
+                                >
+                                    This group is archived. You cannot add expenses or settle debts until it is
+                                    unarchived.
+                                </div>
+                            {/if}
+                        </div>
 
-                                    {#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
-                                        <div class="mt-2 space-y-1">
-                                            {#each balance.balanceByCurrency as currBal}
+                        {#if error}
+                            <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4">
+                                {error}
+                            </div>
+                        {/if}
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <button
+                                on:click={() => (activeTab = "expenses")}
+                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab === 'expenses'
+                                    ? 'bg-primary text-dark'
+                                    : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                            >
+                                Expenses
+                            </button>
+                            <button
+                                on:click={() => (activeTab = "balances")}
+                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab === 'balances'
+                                    ? 'bg-primary text-dark'
+                                    : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                            >
+                                Balances
+                            </button>
+                            <button
+                                on:click={() => (activeTab = "settlements")}
+                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab ===
+                                'settlements'
+                                    ? 'bg-primary text-dark'
+                                    : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                            >
+                                Settlements
+                            </button>
+                        </div>
+
+                        {#if activeTab === "expenses"}
+                            {#if expenses.length === 0}
+                                <div class="text-center py-16 bg-dark-300 rounded-2xl border border-dark-100">
+                                    <p class="text-gray-400">No expenses yet.</p>
+                                </div>
+                            {:else}
+                                <div class="space-y-3">
+                                    {#each expenses as expense}
+                                        <div
+                                            class="bg-dark-300 p-5 rounded-2xl border border-dark-100 hover:border-primary/50 transition"
+                                        >
+                                            <div class="flex flex-wrap justify-between items-start gap-4 mb-3">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center gap-3">
+                                                        <div
+                                                            class="h-10 w-10 rounded-xl bg-dark-200 flex items-center justify-center text-sm font-semibold text-primary"
+                                                        >
+                                                            {expense.description.slice(0, 1).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <h3 class="text-xl font-bold text-white">
+                                                                {expense.description}
+                                                            </h3>
+                                                            <p class="text-sm text-gray-400">
+                                                                Paid by {getMemberName(expense.payer)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {#if expense.note}
+                                                        <p class="text-sm text-gray-400 mt-2">{expense.note}</p>
+                                                    {/if}
+                                                    <div class="text-sm text-gray-500 mt-2">
+                                                        Split with: {expense.shares
+                                                            .map((s) => getMemberName(s.member))
+                                                            .join(", ")}
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div class="text-2xl font-bold text-primary">
+                                                        {formatCurrency(expense.amount)}
+                                                        {expense.currency || "EUR"}
+                                                    </div>
+                                                    {#if expense.currency && expense.currency !== group?.baseCurrency && expense.exchangeRate}
+                                                        <div class="text-xs text-gray-500 mt-1">
+                                                            @ {expense.exchangeRate.toFixed(4)}
+                                                            {group?.baseCurrency || "EUR"}/{expense.currency}
+                                                        </div>
+                                                    {/if}
+                                                    <div class="text-xs text-gray-500 mt-1">
+                                                        {formatDate(expense.createdAt)}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-wrap justify-between items-end gap-4">
+                                                {#if expense.attachments || expense.receiptImageUrl}
+                                                    <div class="flex-1">
+                                                        <div class="text-xs text-gray-500 mb-2">Attachments</div>
+                                                        {#if expense.attachments}
+                                                            {@const parsedAttachments = JSON.parse(expense.attachments)}
+                                                            <AttachmentPreview
+                                                                attachments={parsedAttachments}
+                                                                onImageClick={handleImagePreview}
+                                                            />
+                                                        {:else if expense.receiptImageUrl}
+                                                            <AttachmentPreview
+                                                                attachments={[
+                                                                    {
+                                                                        url: expense.receiptImageUrl,
+                                                                        name: "receipt.jpg",
+                                                                        type: "image/jpeg",
+                                                                    },
+                                                                ]}
+                                                                onImageClick={handleImagePreview}
+                                                            />
+                                                        {/if}
+                                                    </div>
+                                                {:else}
+                                                    <div class="flex-1"></div>
+                                                {/if}
+                                                <div class="flex gap-2">
+                                                    <button
+                                                        on:click={() => startEditExpense(expense)}
+                                                        class="w-10 h-10 flex items-center justify-center bg-dark-200 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                                        title="Edit"
+                                                    >
+                                                        <svg
+                                                            class="w-5 h-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        on:click={() => deleteExpense(expense.id)}
+                                                        class="w-10 h-10 flex items-center justify-center bg-dark-200 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
+                                                        title="Delete"
+                                                    >
+                                                        <svg
+                                                            class="w-5 h-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {/each}
+                                </div>
+                            {/if}
+                        {/if}
+
+                        {#if activeTab === "balances"}
+                            <div class="space-y-3">
+                                {#each balances as balance}
+                                    <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex-1">
+                                                <div class="font-semibold text-white">{balance.memberName}</div>
+                                                {#if balance.isGuest}
+                                                    <div class="text-xs text-gray-500 mb-2">Guest member</div>
+                                                {/if}
+
+                                                {#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
+                                                    <div class="mt-2 space-y-1">
+                                                        {#each balance.balanceByCurrency as currBal}
+                                                            <div
+                                                                class="text-sm font-medium {currBal.amount > 0
+                                                                    ? 'text-green-400'
+                                                                    : currBal.amount < 0
+                                                                      ? 'text-red-400'
+                                                                      : 'text-gray-400'}"
+                                                            >
+                                                                {currBal.amount > 0
+                                                                    ? "Owed: +"
+                                                                    : "Owes: "}{formatCurrency(
+                                                                    Math.abs(currBal.amount),
+                                                                )}
+                                                                {currBal.currency}
+                                                            </div>
+                                                        {/each}
+                                                        {#if balance.balanceByCurrency.length > 1}
+                                                            <div
+                                                                class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100"
+                                                            >
+                                                                Total in {group?.baseCurrency || "EUR"}: {balance.balance >
+                                                                0
+                                                                    ? "+"
+                                                                    : ""}{formatCurrency(Math.abs(balance.balance))}
+                                                            </div>
+                                                        {/if}
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                            <div class="text-right">
                                                 <div
-                                                    class="text-sm font-medium {currBal.amount > 0
+                                                    class="text-xl font-bold {balance.balance > 0
                                                         ? 'text-green-400'
-                                                        : currBal.amount < 0
+                                                        : balance.balance < 0
                                                           ? 'text-red-400'
                                                           : 'text-gray-400'}"
                                                 >
-                                                    {currBal.amount > 0 ? "Owed: +" : "Owes: "}{formatCurrency(
-                                                        Math.abs(currBal.amount),
-                                                    )}
-                                                    {currBal.currency}
+                                                    {#if balance.balance > 0}
+                                                        +{formatCurrency(balance.balance)}
+                                                    {:else if balance.balance < 0}
+                                                        -{formatCurrency(Math.abs(balance.balance))}
+                                                    {:else}
+                                                        Settled
+                                                    {/if}
                                                 </div>
-                                            {/each}
-                                            {#if balance.balanceByCurrency.length > 1}
-                                                <div class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100">
-                                                    Total in {group?.baseCurrency || "EUR"}: {balance.balance > 0
-                                                        ? "+"
-                                                        : ""}{formatCurrency(Math.abs(balance.balance))}
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    {group?.baseCurrency || "EUR"}
                                                 </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-sm text-gray-400 border-t border-dark-100 pt-2">
+                                            {#if balance.balance > 0}
+                                                Is owed in total
+                                            {:else if balance.balance < 0}
+                                                Owes in total
+                                            {:else}
+                                                All settled up
                                             {/if}
                                         </div>
-                                    {/if}
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
+
+                        {#if activeTab === "settlements"}
+                            {#if settlements.length === 0}
+                                <div class="text-center py-12 bg-dark-300 rounded-2xl">
+                                    <p class="text-gray-400">No settlements recorded yet.</p>
                                 </div>
-                                <div class="text-right">
+                            {:else}
+                                <div class="space-y-3">
+                                    {#each settlements as settlement}
+                                        <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
+                                            <div class="flex justify-between items-start">
+                                                <div>
+                                                    <div class="text-white">
+                                                        <span class="font-semibold"
+                                                            >{getMemberName(settlement.fromMember)}</span
+                                                        >
+                                                        <span class="text-gray-400"> paid </span>
+                                                        <span class="font-semibold"
+                                                            >{getMemberName(settlement.toMember)}</span
+                                                        >
+                                                    </div>
+                                                    <div class="text-xs text-gray-500 mt-1">
+                                                        {formatDate(settlement.createdAt)}
+                                                    </div>
+                                                </div>
+                                                <div class="text-lg font-bold text-primary">
+                                                    {formatCurrency(settlement.amount)}
+                                                    {settlement.currency || "EUR"}
+                                                    {#if settlement.currency && settlement.currency !== group?.baseCurrency && settlement.exchangeRate}
+                                                        <div class="text-xs text-gray-500 font-normal mt-0.5">
+                                                            @ {settlement.exchangeRate.toFixed(4)}
+                                                            {group?.baseCurrency || "EUR"}/{settlement.currency}
+                                                        </div>
+                                                    {/if}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {/each}
+                                </div>
+                            {/if}
+                        {/if}
+
+                        {#if activeTab === "members"}
+                            <div class="mb-4 flex flex-wrap gap-2">
+                                <button
+                                    on:click={() => (showInviteMember = true)}
+                                    class="flex-1 bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition"
+                                >
+                                    Invite Member
+                                </button>
+                                <button
+                                    on:click={() => (showAddGuestMember = true)}
+                                    class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-xl font-semibold hover:bg-dark-100 transition border border-primary"
+                                >
+                                    Add Guest Member
+                                </button>
+                            </div>
+
+                            <div class="space-y-4">
+                                {#if pendingInvitations.length > 0}
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-white mb-3">Pending Invitations</h3>
+                                        <div class="space-y-2">
+                                            {#each pendingInvitations as invitation}
+                                                <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
+                                                    <div class="flex justify-between items-center">
+                                                        <div>
+                                                            <div class="font-semibold text-white">
+                                                                {invitation.email}
+                                                            </div>
+                                                            <div class="text-sm text-gray-400">
+                                                                Invited by {invitation.invitedBy.name}
+                                                                {#if invitation.type === "token"}
+                                                                    • New user
+                                                                {:else}
+                                                                    • Existing user
+                                                                {/if}
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-1">
+                                                                {formatDate(invitation.createdAt)}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            on:click={() =>
+                                                                revokeInvitation(invitation.id, invitation.type)}
+                                                            class="text-red-400 hover:text-red-300 text-sm"
+                                                        >
+                                                            Revoke
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    </div>
+                                {/if}
+
+                                <div>
+                                    <h3 class="text-lg font-semibold text-white mb-3">All Members</h3>
+                                    <div class="space-y-2">
+                                        {#each allMembers as member}
+                                            <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
+                                                <div class="flex justify-between items-center">
+                                                    <div>
+                                                        <div class="font-semibold text-white">
+                                                            {getMemberName(member)}
+                                                        </div>
+                                                        {#if member.user}
+                                                            <div class="text-sm text-gray-400">
+                                                                {member.user.email}
+                                                            </div>
+                                                        {:else}
+                                                            <div class="text-sm text-gray-400">No account required</div>
+                                                        {/if}
+                                                    </div>
+                                                    {#if member.userId !== null}
+                                                        <div class="text-xs text-primary">Registered</div>
+                                                    {:else}
+                                                        <button
+                                                            on:click={() => deleteGuestMember(member.id)}
+                                                            class="text-red-400 hover:text-red-300 text-sm"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    {/if}
+                                                </div>
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </div>
+                            </div>
+                        {/if}
+
+                        {#if activeTab === "settings"}
+                            {#if group.createdBy === $user?.id}
+                                <div class="bg-dark-300 p-6 rounded-2xl border border-dark-100">
+                                    <div class="flex flex-wrap gap-6 items-start">
+                                        <div
+                                            class="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary/80 to-primary-600 flex items-center justify-center text-4xl font-bold text-dark"
+                                        >
+                                            {group.name?.slice(0, 1) || "G"}
+                                        </div>
+                                        <div class="flex-1 min-w-[220px]">
+                                            <h3 class="text-2xl font-bold text-white mb-2">Group Settings</h3>
+                                            <p class="text-sm text-gray-400">Manage your group details and members.</p>
+                                        </div>
+                                    </div>
+
+                                    {#if settingsSaved}
+                                        <div
+                                            class="bg-green-900/50 border border-green-500 text-green-200 p-3 rounded mb-4 mt-4"
+                                        >
+                                            Settings saved successfully!
+                                        </div>
+                                    {/if}
+
+                                    <form on:submit|preventDefault={saveGroupSettings} class="space-y-6 mt-6">
+                                        <div>
+                                            <label
+                                                for="settingsGroupName"
+                                                class="block text-sm font-medium text-gray-300 mb-2"
+                                            >
+                                                Group Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="settingsGroupName"
+                                                bind:value={editGroupName}
+                                                required
+                                                class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                                                placeholder="e.g., Roommates, Trip to Paris"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                for="settingsGroupDescription"
+                                                class="block text-sm font-medium text-gray-300 mb-2"
+                                            >
+                                                Description
+                                            </label>
+                                            <textarea
+                                                id="settingsGroupDescription"
+                                                bind:value={editGroupDescription}
+                                                rows="3"
+                                                class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                                                placeholder="What is this group for?"
+                                            ></textarea>
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                for="settingsBaseCurrency"
+                                                class="block text-sm font-medium text-gray-300 mb-2"
+                                            >
+                                                Base Currency
+                                            </label>
+                                            <select
+                                                id="settingsBaseCurrency"
+                                                bind:value={editGroupCurrency}
+                                                class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                                            >
+                                                {#each supportedCurrencies as curr}
+                                                    <option value={curr}>{curr}</option>
+                                                {/each}
+                                            </select>
+                                            <p class="text-xs text-gray-400 mt-1">
+                                                The base currency is used to display total balances when multiple
+                                                currencies are used.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
+                                        >
+                                            Save Settings
+                                        </button>
+                                    </form>
+
+                                    <div class="mt-6 pt-6 border-t border-dark-100">
+                                        <h4 class="text-lg font-semibold text-white mb-3">Archive Group</h4>
+                                        <p class="text-sm text-gray-400 mb-4">
+                                            {#if group.archived}
+                                                This group is currently archived. Unarchive it to add expenses or settle
+                                                debts.
+                                            {:else}
+                                                Archive this group to hide it from your groups list. You can unarchive
+                                                it later if needed.
+                                            {/if}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            on:click={toggleArchive}
+                                            class="w-full {group.archived
+                                                ? 'bg-primary text-dark'
+                                                : 'bg-dark-200 text-white'} py-3 px-6 rounded-lg font-semibold hover:opacity-80 transition"
+                                        >
+                                            {group.archived ? "Unarchive Group" : "Archive Group"}
+                                        </button>
+                                    </div>
+                                </div>
+                            {:else}
+                                <div class="text-center py-12 bg-dark-300 rounded-2xl">
+                                    <p class="text-gray-400">Only the group creator can modify settings.</p>
+                                </div>
+                            {/if}
+                        {/if}
+                    {/if}
+
+                    <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
+                        <p>
+                            &copy; {currentYear} Kamil Marut
+                            <span class="mx-2">•</span>
+                            <a
+                                href="https://github.com/exler/spendbee"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-primary hover:text-primary-400 transition"
+                            >
+                                GitHub
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </main>
+
+            <aside
+                class="hidden xl:flex w-80 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+            >
+                <div class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Group balances</div>
+                    {#if balances.length === 0}
+                        <div class="mt-3 text-sm text-gray-400">No balances yet.</div>
+                    {:else}
+                        <div class="mt-4 space-y-3">
+                            {#each balances.slice(0, 4) as balance}
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-sm font-semibold text-white">{balance.memberName}</div>
+                                        <div class="text-xs text-gray-500">{group?.baseCurrency || "EUR"}</div>
+                                    </div>
                                     <div
-                                        class="text-xl font-bold {balance.balance > 0
+                                        class="text-sm font-semibold {balance.balance > 0
                                             ? 'text-green-400'
                                             : balance.balance < 0
                                               ? 'text-red-400'
                                               : 'text-gray-400'}"
                                     >
-                                        {#if balance.balance > 0}
-                                            +{formatCurrency(balance.balance)}
-                                        {:else if balance.balance < 0}
-                                            -{formatCurrency(Math.abs(balance.balance))}
-                                        {:else}
-                                            Settled
-                                        {/if}
-                                    </div>
-                                    <div class="text-xs text-gray-500 mt-1">
-                                        {group?.baseCurrency || "EUR"}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-sm text-gray-400 border-t border-dark-100 pt-2">
-                                {#if balance.balance > 0}
-                                    Is owed in total
-                                {:else if balance.balance < 0}
-                                    Owes in total
-                                {:else}
-                                    All settled up
-                                {/if}
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-            {/if}
-
-            {#if activeTab === "settlements"}
-                {#if settlements.length === 0}
-                    <div class="text-center py-12 bg-dark-300 rounded-lg">
-                        <p class="text-gray-400">No settlements recorded yet.</p>
-                    </div>
-                {:else}
-                    <div class="space-y-3">
-                        {#each settlements as settlement}
-                            <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <div class="text-white">
-                                            <span class="font-semibold">{getMemberName(settlement.fromMember)}</span>
-                                            <span class="text-gray-400"> paid </span>
-                                            <span class="font-semibold">{getMemberName(settlement.toMember)}</span>
-                                        </div>
-                                        <div class="text-xs text-gray-400 mt-1">
-                                            {formatDate(settlement.createdAt)}
-                                        </div>
-                                    </div>
-                                    <div class="text-lg font-bold text-primary">
-                                        {formatCurrency(settlement.amount)}
-                                        {settlement.currency || "EUR"}
-                                        {#if settlement.currency && settlement.currency !== group?.baseCurrency && settlement.exchangeRate}
-                                            <div class="text-xs text-gray-500 font-normal mt-0.5">
-                                                @ {settlement.exchangeRate.toFixed(4)} {group?.baseCurrency || "EUR"}/{settlement.currency}
-                                            </div>
-                                        {/if}
-                                    </div>
-                                </div>
-                            </div>
-                        {/each}
-                    </div>
-                {/if}
-            {/if}
-
-            {#if activeTab === "members"}
-                <div class="mb-4 flex gap-2">
-                    <button
-                        on:click={() => (showInviteMember = true)}
-                        class="flex-1 bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
-                    >
-                        Invite Member
-                    </button>
-                    <button
-                        on:click={() => (showAddGuestMember = true)}
-                        class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-lg font-semibold hover:bg-dark-100 transition border border-primary"
-                    >
-                        Add Guest Member
-                    </button>
-                </div>
-
-                <div class="space-y-4">
-                    {#if pendingInvitations.length > 0}
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Pending Invitations</h3>
-                            <div class="space-y-2">
-                                {#each pendingInvitations as invitation}
-                                    <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <div class="font-semibold text-white">
-                                                    {invitation.email}
-                                                </div>
-                                                <div class="text-sm text-gray-400">
-                                                    Invited by {invitation.invitedBy.name}
-                                                    {#if invitation.type === "token"}
-                                                        • New user
-                                                    {:else}
-                                                        • Existing user
-                                                    {/if}
-                                                </div>
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    {formatDate(invitation.createdAt)}
-                                                </div>
-                                            </div>
-                                            <button
-                                                on:click={() => revokeInvitation(invitation.id, invitation.type)}
-                                                class="text-red-400 hover:text-red-300 text-sm"
-                                            >
-                                                Revoke
-                                            </button>
-                                        </div>
-                                    </div>
-                                {/each}
-                            </div>
-                        </div>
-                    {/if}
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-white mb-3">All Members</h3>
-                        <div class="space-y-2">
-                            {#each allMembers as member}
-                                <div class="bg-dark-300 p-4 rounded-lg border border-dark-100">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <div class="font-semibold text-white">
-                                                {getMemberName(member)}
-                                            </div>
-                                            {#if member.user}
-                                                <div class="text-sm text-gray-400">
-                                                    {member.user.email}
-                                                </div>
-                                            {:else}
-                                                <div class="text-sm text-gray-400">No account required</div>
-                                            {/if}
-                                        </div>
-                                        {#if member.userId !== null}
-                                            <div class="text-xs text-primary">Registered</div>
-                                        {:else}
-                                            <button
-                                                on:click={() => deleteGuestMember(member.id)}
-                                                class="text-red-400 hover:text-red-300 text-sm"
-                                            >
-                                                Remove
-                                            </button>
-                                        {/if}
+                                        {balance.balance > 0 ? "+" : balance.balance < 0 ? "-" : ""}{formatCurrency(
+                                            Math.abs(balance.balance),
+                                        )}
                                     </div>
                                 </div>
                             {/each}
                         </div>
+                        <button
+                            on:click={() => (activeTab = "balances")}
+                            class="mt-4 w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
+                        >
+                            View details
+                        </button>
+                    {/if}
+                </div>
+
+                <div class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Recent activity</div>
+                    <div class="mt-4 space-y-3">
+                        {#each expenses.slice(0, 4) as expense}
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="h-9 w-9 rounded-xl bg-dark-200 flex items-center justify-center text-sm font-semibold text-primary"
+                                >
+                                    {expense.description.slice(0, 1).toUpperCase()}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-sm text-white">{expense.description}</div>
+                                    <div class="text-xs text-gray-500">{formatDate(expense.createdAt)}</div>
+                                </div>
+                                <div class="text-sm font-semibold text-primary">
+                                    {formatCurrency(expense.amount)}
+                                </div>
+                            </div>
+                        {/each}
+                        {#if expenses.length === 0}
+                            <div class="text-sm text-gray-400">Activity feed coming soon.</div>
+                        {/if}
                     </div>
                 </div>
-            {/if}
 
-            {#if activeTab === "settings"}
-                {#if group.createdBy === $user?.id}
-                    <div class="bg-dark-300 p-6 rounded-lg border border-dark-100">
-                        <h3 class="text-2xl font-bold text-white mb-6">Group Settings</h3>
-
-                        {#if settingsSaved}
-                            <div class="bg-green-900/50 border border-green-500 text-green-200 p-3 rounded mb-4">
-                                Settings saved successfully!
-                            </div>
-                        {/if}
-
-                        <form on:submit|preventDefault={saveGroupSettings} class="space-y-6">
-                            <div>
-                                <label for="settingsGroupName" class="block text-sm font-medium text-gray-300 mb-2">
-                                    Group Name
-                                </label>
-                                <input
-                                    type="text"
-                                    id="settingsGroupName"
-                                    bind:value={editGroupName}
-                                    required
-                                    class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                                    placeholder="e.g., Roommates, Trip to Paris"
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    for="settingsGroupDescription"
-                                    class="block text-sm font-medium text-gray-300 mb-2"
-                                >
-                                    Description
-                                </label>
-                                <textarea
-                                    id="settingsGroupDescription"
-                                    bind:value={editGroupDescription}
-                                    rows="3"
-                                    class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                                    placeholder="What is this group for?"
-                                ></textarea>
-                            </div>
-
-                            <div>
-                                <label for="settingsBaseCurrency" class="block text-sm font-medium text-gray-300 mb-2">
-                                    Base Currency
-                                </label>
-                                <select
-                                    id="settingsBaseCurrency"
-                                    bind:value={editGroupCurrency}
-                                    class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                                >
-                                    {#each supportedCurrencies as curr}
-                                        <option value={curr}>{curr}</option>
-                                    {/each}
-                                </select>
-                                <p class="text-xs text-gray-400 mt-1">
-                                    The base currency is used to display total balances when multiple currencies are
-                                    used.
-                                </p>
-                            </div>
-
-                            <button
-                                type="submit"
-                                class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition"
-                            >
-                                Save Settings
-                            </button>
-                        </form>
-
-                        <div class="mt-6 pt-6 border-t border-dark-100">
-                            <h4 class="text-lg font-semibold text-white mb-3">Archive Group</h4>
-                            <p class="text-sm text-gray-400 mb-4">
-                                {#if group.archived}
-                                    This group is currently archived. Unarchive it to add expenses or settle debts.
-                                {:else}
-                                    Archive this group to hide it from your groups list. You can unarchive it later if
-                                    needed.
-                                {/if}
-                            </p>
-                            <button
-                                type="button"
-                                on:click={toggleArchive}
-                                class="w-full {group.archived
-                                    ? 'bg-primary text-dark'
-                                    : 'bg-dark-200 text-white'} py-3 px-6 rounded-lg font-semibold hover:opacity-80 transition"
-                            >
-                                {group.archived ? "Unarchive Group" : "Archive Group"}
-                            </button>
-                        </div>
+                <div class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Group settings</div>
+                    <div class="mt-4 space-y-2">
+                        <button
+                            on:click={() => (activeTab = "settings")}
+                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
+                        >
+                            Edit group settings
+                        </button>
+                        <button
+                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-500"
+                            disabled
+                        >
+                            Export as spreadsheet
+                        </button>
+                        <button
+                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-500"
+                            disabled
+                        >
+                            Manage reminders
+                        </button>
                     </div>
-                {:else}
-                    <div class="text-center py-12 bg-dark-300 rounded-lg">
-                        <p class="text-gray-400">Only the group creator can modify settings.</p>
-                    </div>
-                {/if}
-            {/if}
-        {/if}
-
-        <!-- Footer -->
-        <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
-            <p>
-                &copy; {currentYear} Kamil Marut
-                <span class="mx-2">•</span>
-                <a 
-                    href="https://github.com/exler/spendbee" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="text-primary hover:text-primary-400 transition"
-                >
-                    GitHub
-                </a>
-            </p>
+                </div>
+            </aside>
         </div>
     </div>
 </div>
 
 {#if showAddExpense && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold text-white mb-4">Add Expense</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">New expense</div>
+                    <h3 class="text-2xl font-bold text-white">Add Expense</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    +
+                </div>
+            </div>
             <form on:submit|preventDefault={addExpense} class="space-y-4">
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-300 mb-2"> Description </label>
@@ -1248,42 +1517,57 @@
                         placeholder="Add any additional context or details..."
                     ></textarea>
                 </div>
-                <div>
-                    <label for="amount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                    <input
-                        type="number"
-                        id="amount"
-                        bind:value={expenseAmount}
-                        required
-                        step="0.01"
-                        min="0.01"
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                        placeholder="0.00"
-                    />
-                </div>
-                <div>
-                    <label for="currency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
-                    <select
-                        id="currency"
-                        bind:value={expenseCurrency}
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                    >
-                        {#each supportedCurrencies as curr}
-                            <option value={curr}>{curr}</option>
-                        {/each}
-                    </select>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
+                        <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
+                            <span class="text-sm text-gray-400">{expenseCurrency}</span>
+                            <input
+                                type="number"
+                                id="amount"
+                                bind:value={expenseAmount}
+                                required
+                                step="0.01"
+                                min="0.01"
+                                class="w-full bg-transparent text-white focus:outline-none"
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label for="currency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
+                        <select
+                            id="currency"
+                            bind:value={expenseCurrency}
+                            class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                        >
+                            {#each supportedCurrencies as curr}
+                                <option value={curr}>{curr}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label for="expenseDate" class="block text-sm font-medium text-gray-300 mb-2">
                         Date (optional)
                     </label>
-                    <input
-                        type="date"
-                        id="expenseDate"
-                        bind:value={expenseDate}
-                        max={new Date().toISOString().split("T")[0]}
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                    />
+                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                        </svg>
+                        <input
+                            type="date"
+                            id="expenseDate"
+                            bind:value={expenseDate}
+                            max={new Date().toISOString().split("T")[0]}
+                            class="w-full bg-transparent text-white focus:outline-none"
+                        />
+                    </div>
                     <p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
                 </div>
                 <div>
@@ -1371,8 +1655,18 @@
                                                 on:click={() => deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                <svg
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
                                                 </svg>
                                             </button>
                                         </div>
@@ -1445,7 +1739,12 @@
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                />
                                             </svg>
                                         </button>
                                     </div>
@@ -1483,9 +1782,11 @@
                             Select All
                         </button>
                     </div>
-                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                    <div class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto">
                         {#each allMembers as member}
-                            <label class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer">
+                            <label
+                                class="flex items-center space-x-2 p-2 bg-dark-200 rounded-lg cursor-pointer border border-dark-100 hover:border-primary/50 transition"
+                            >
                                 <input
                                     type="checkbox"
                                     checked={selectedMembers.includes(member.id)}
@@ -1510,7 +1811,8 @@
                                 <p class="text-xs text-gray-400">
                                     {selectedMembers.length} member(s) selected • {formatCurrency(
                                         parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )} {expenseCurrency} each
+                                    )}
+                                    {expenseCurrency} each
                                 </p>
                             {:else}
                                 <div class="space-y-2 mb-2">
@@ -1563,14 +1865,14 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Add
                     </button>
                     <button
                         type="button"
                         on:click={() => (showAddExpense = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1582,8 +1884,20 @@
 
 {#if showSettleDebt && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-4">Settle Debt</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Settlement</div>
+                    <h3 class="text-2xl font-bold text-white">Settle Debt</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    OK
+                </div>
+            </div>
             <form on:submit|preventDefault={settleDebt} class="space-y-4">
                 <div>
                     <label for="fromMember" class="block text-sm font-medium text-gray-300 mb-2">
@@ -1619,16 +1933,19 @@
                 </div>
                 <div>
                     <label for="settleAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                    <input
-                        type="number"
-                        id="settleAmount"
-                        bind:value={settleAmount}
-                        required
-                        step="0.01"
-                        min="0.01"
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                        placeholder="0.00"
-                    />
+                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
+                        <span class="text-sm text-gray-400">{settleCurrency}</span>
+                        <input
+                            type="number"
+                            id="settleAmount"
+                            bind:value={settleAmount}
+                            required
+                            step="0.01"
+                            min="0.01"
+                            class="w-full bg-transparent text-white focus:outline-none"
+                            placeholder="0.00"
+                        />
+                    </div>
                 </div>
                 <div>
                     <label for="settleCurrency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
@@ -1645,14 +1962,14 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Settle
                     </button>
                     <button
                         type="button"
                         on:click={() => (showSettleDebt = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1664,8 +1981,20 @@
 
 {#if showAddGuestMember && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-4">Add Guest Member</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Guest</div>
+                    <h3 class="text-2xl font-bold text-white">Add Guest Member</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    +
+                </div>
+            </div>
             <p class="text-sm text-gray-400 mb-4">
                 Guest members don't need an account. Perfect for visitors or people who don't want to register.
             </p>
@@ -1684,14 +2013,14 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Add
                     </button>
                     <button
                         type="button"
                         on:click={() => (showAddGuestMember = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1703,8 +2032,20 @@
 
 {#if showChangeCurrency && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-4">Change Base Currency</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Currency</div>
+                    <h3 class="text-2xl font-bold text-white">Change Base Currency</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    FX
+                </div>
+            </div>
             <p class="text-sm text-gray-400 mb-4">
                 The base currency is used to display total balances when multiple currencies are used in the group.
             </p>
@@ -1726,14 +2067,14 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Update
                     </button>
                     <button
                         type="button"
                         on:click={() => (showChangeCurrency = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1745,8 +2086,20 @@
 
 {#if showInviteMember && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-4">Invite Member</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Invite</div>
+                    <h3 class="text-2xl font-bold text-white">Invite Member</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    @
+                </div>
+            </div>
             <p class="text-sm text-gray-400 mb-4">
                 Invite a user by their email address. They will receive a notification and can accept or decline the
                 invitation.
@@ -1768,14 +2121,14 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Send Invitation
                     </button>
                     <button
                         type="button"
                         on:click={() => (showInviteMember = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1787,10 +2140,17 @@
 
 {#if showScanReceipt && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-md w-full">
-            <h3 class="text-2xl font-bold text-white mb-4">Scan Receipt</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Receipt</div>
+                    <h3 class="text-2xl font-bold text-white">Scan Receipt</h3>
+                </div>
+            </div>
             <p class="text-sm text-gray-400 mb-4">
-                Upload a photo of your receipt and we'll automatically extract the items and amounts. You can add additional attachments after the receipt is analyzed.
+                Upload a photo of your receipt and we'll automatically extract the items and amounts.
             </p>
             <div class="space-y-4">
                 <div>
@@ -1807,9 +2167,24 @@
                             </div>
                         {:else}
                             <div class="flex flex-col items-center gap-2">
-                                <svg class="w-12 h-12 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <svg
+                                    class="w-12 h-12 text-primary"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
                                 </svg>
                                 <span class="text-gray-300">Click to upload receipt image</span>
                                 <span class="text-xs text-gray-400">JPG, PNG, or HEIC</span>
@@ -1829,7 +2204,7 @@
                     <button
                         type="button"
                         on:click={() => (showScanReceipt = false)}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -1845,7 +2220,7 @@
         on:click={() => (previewImageUrl = null)}
         role="button"
         tabindex="0"
-        on:keydown={(e) => e.key === 'Escape' && (previewImageUrl = null)}
+        on:keydown={(e) => e.key === "Escape" && (previewImageUrl = null)}
     >
         <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
             <img
@@ -1862,7 +2237,6 @@
         </div>
     </div>
 {/if}
-
 
 {#if showReceiptPreview !== null}
     {@const expense = expenses.find((e) => e.id === showReceiptPreview)}
@@ -1890,11 +2264,25 @@
 
 {#if showEditExpense && group}
     <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
-        <div class="bg-dark-300 p-6 rounded-t-2xl md:rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold text-white mb-4">Edit Expense</h3>
+        <div
+            class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Edit</div>
+                    <h3 class="text-2xl font-bold text-white">Edit Expense</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    ED
+                </div>
+            </div>
             <form on:submit|preventDefault={updateExpense} class="space-y-4">
                 <div>
-                    <label for="editDescription" class="block text-sm font-medium text-gray-300 mb-2"> Description </label>
+                    <label for="editDescription" class="block text-sm font-medium text-gray-300 mb-2">
+                        Description
+                    </label>
                     <input
                         type="text"
                         id="editDescription"
@@ -1914,42 +2302,59 @@
                         placeholder="Add any additional context or details..."
                     ></textarea>
                 </div>
-                <div>
-                    <label for="editAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                    <input
-                        type="number"
-                        id="editAmount"
-                        bind:value={expenseAmount}
-                        required
-                        step="0.01"
-                        min="0.01"
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                        placeholder="0.00"
-                    />
-                </div>
-                <div>
-                    <label for="editCurrency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
-                    <select
-                        id="editCurrency"
-                        bind:value={expenseCurrency}
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                    >
-                        {#each supportedCurrencies as curr}
-                            <option value={curr}>{curr}</option>
-                        {/each}
-                    </select>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label for="editAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
+                        <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
+                            <span class="text-sm text-gray-400">{expenseCurrency}</span>
+                            <input
+                                type="number"
+                                id="editAmount"
+                                bind:value={expenseAmount}
+                                required
+                                step="0.01"
+                                min="0.01"
+                                class="w-full bg-transparent text-white focus:outline-none"
+                                placeholder="0.00"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label for="editCurrency" class="block text-sm font-medium text-gray-300 mb-2">
+                            Currency
+                        </label>
+                        <select
+                            id="editCurrency"
+                            bind:value={expenseCurrency}
+                            class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                        >
+                            {#each supportedCurrencies as curr}
+                                <option value={curr}>{curr}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label for="editExpenseDate" class="block text-sm font-medium text-gray-300 mb-2">
                         Date (optional)
                     </label>
-                    <input
-                        type="date"
-                        id="editExpenseDate"
-                        bind:value={expenseDate}
-                        max={new Date().toISOString().split("T")[0]}
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                    />
+                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                        </svg>
+                        <input
+                            type="date"
+                            id="editExpenseDate"
+                            bind:value={expenseDate}
+                            max={new Date().toISOString().split("T")[0]}
+                            class="w-full bg-transparent text-white focus:outline-none"
+                        />
+                    </div>
                     <p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
                 </div>
                 <div>
@@ -2017,9 +2422,11 @@
                             Select All
                         </button>
                     </div>
-                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                    <div class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto">
                         {#each allMembers as member}
-                            <label class="flex items-center space-x-2 p-2 bg-dark-200 rounded cursor-pointer">
+                            <label
+                                class="flex items-center space-x-2 p-2 bg-dark-200 rounded-lg cursor-pointer border border-dark-100 hover:border-primary/50 transition"
+                            >
                                 <input
                                     type="checkbox"
                                     checked={selectedMembers.includes(member.id)}
@@ -2044,7 +2451,8 @@
                                 <p class="text-xs text-gray-400">
                                     {selectedMembers.length} member(s) selected • {formatCurrency(
                                         parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )} {expenseCurrency} each
+                                    )}
+                                    {expenseCurrency} each
                                 </p>
                             {:else}
                                 <div class="space-y-2 mb-2">
@@ -2140,8 +2548,18 @@
                                                 on:click={() => deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                <svg
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
                                                 </svg>
                                             </button>
                                         </div>
@@ -2214,7 +2632,12 @@
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                />
                                             </svg>
                                         </button>
                                     </div>
@@ -2245,7 +2668,7 @@
                 <div class="flex gap-2">
                     <button
                         type="submit"
-                        class="flex-1 bg-primary text-dark py-2 px-4 rounded-lg font-semibold hover:bg-primary-400 transition"
+                        class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
                     >
                         Save Changes
                     </button>
@@ -2256,7 +2679,7 @@
                             editingExpenseId = null;
                             resetExpenseForm();
                         }}
-                        class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
+                        class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
                     </button>
@@ -2272,7 +2695,7 @@
         on:click={() => (previewImageUrl = null)}
         role="button"
         tabindex="0"
-        on:keydown={(e) => e.key === 'Escape' && (previewImageUrl = null)}
+        on:keydown={(e) => e.key === "Escape" && (previewImageUrl = null)}
     >
         <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
             <img

@@ -51,28 +51,29 @@ async function handleRegister() {
     <title>Register - Spendbee</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-dark to-dark-300">
+<div class="min-h-screen flex items-center justify-center p-4 bg-dark-500">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="/" class="inline-block">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-32 h-32 mx-auto" />
+                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
             </a>
-            <h2 class="text-2xl font-semibold text-white mt-4">
+            <h2 class="text-3xl font-semibold text-white mt-4">
                 {#if token}
                     Complete Your Invitation
                 {:else}
                     Invitation Required
                 {/if}
             </h2>
+            <p class="text-sm text-gray-400 mt-2">Join your group to start splitting expenses.</p>
         </div>
 
         {#if invitationRequired}
-            <div class="bg-dark-300 p-6 rounded-lg shadow-lg text-center space-y-4">
+            <div class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] text-center space-y-4 border border-dark-100">
                 <div class="bg-yellow-900/30 border border-yellow-500/50 text-yellow-200 p-4 rounded">
-                    <p class="font-semibold mb-2">🔒 Registration is by invitation only</p>
+                    <p class="font-semibold mb-2">Registration is by invitation only</p>
                     <p class="text-sm">
                         To create an account, you need to be invited to a group by an existing member.
-                        Ask someone with a Spendbee account to invite you!
+                        Ask someone with a Spendbee account to invite you.
                     </p>
                 </div>
 
@@ -82,7 +83,7 @@ async function handleRegister() {
                 </p>
             </div>
         {:else}
-            <form on:submit|preventDefault={handleRegister} class="bg-dark-300 p-6 rounded-lg shadow-lg space-y-4">
+            <form on:submit|preventDefault={handleRegister} class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100">
                 {#if error}
                     <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded">
                         {error}
@@ -90,8 +91,8 @@ async function handleRegister() {
                 {/if}
 
                 {#if token}
-                    <div class="bg-blue-900/30 border border-blue-500/50 text-blue-200 p-3 rounded text-sm">
-                        ✉️ You've been invited! Fill out the form below to create your account and join the group.
+                    <div class="bg-dark-200/70 border border-dark-100 text-gray-200 p-3 rounded text-sm">
+                        You're invited! Fill out the form below to create your account and join the group.
                     </div>
                 {/if}
 
@@ -136,7 +137,7 @@ async function handleRegister() {
                 <button
                     type="submit"
                     disabled={loading}
-                    class="w-full bg-primary text-dark py-3 px-6 rounded-lg font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-full bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? "Creating account..." : "Create Account & Join Group"}
                 </button>
