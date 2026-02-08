@@ -571,6 +571,11 @@
         return amount.toFixed(2);
     }
 
+    function exportExpenses() {
+        if (!groupUuid) return;
+        window.location.href = `/api/expenses/group/${groupUuid}/export`;
+    }
+
     function getMemberName(member: GroupMember) {
         if (member.user?.name) return member.user.name;
         if (member.name) return `${member.name} (guest)`;
@@ -1461,8 +1466,8 @@
                             Edit group settings
                         </button>
                         <button
-                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-500"
-                            disabled
+                            on:click={exportExpenses}
+                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
                         >
                             Export as spreadsheet
                         </button>
