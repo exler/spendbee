@@ -7,7 +7,6 @@
     import RightSidebar from "$lib/components/RightSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
 
-
     interface Group {
         id: number;
         uuid: string;
@@ -39,7 +38,6 @@
         loadGroups();
         loadCurrencies();
     });
-
 
     async function loadCurrencies() {
         try {
@@ -82,8 +80,6 @@
             error = e instanceof Error ? e.message : "Failed to create group";
         }
     }
-
-
 </script>
 
 <svelte:head>
@@ -107,15 +103,9 @@
 
             <main class="flex-1">
                 <MobileNavbar />
-                <div class="hidden lg:flex pt-6 mb-6 items-center justify-between">
-                    <a href="/groups" class="inline-flex items-center gap-3 hover:opacity-80 transition">
-                        <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
-                        <span class="text-2xl font-semibold">Spendbee</span>
-                    </a>
-                </div>
 
                 <div
-                    class="mb-6 rounded-3xl border border-dark-100/70 bg-dark-300/55 p-6 shadow-[0_0_30px_rgba(0,0,0,0.25)]"
+                    class="my-6 rounded-3xl border border-dark-100/70 bg-dark-300/55 p-6 shadow-[0_0_30px_rgba(0,0,0,0.25)]"
                 >
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -234,7 +224,6 @@
                         </div>
                     </div>
                 {/if}
-
             </main>
 
             <RightSidebar />
