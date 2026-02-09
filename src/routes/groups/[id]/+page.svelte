@@ -112,6 +112,8 @@
     let selectedMembers: number[] = [];
     let splitEvenly = true;
     let customShares: { [memberId: number]: string } = {};
+    let splitMode: "amounts" | "percent" = "amounts";
+    let percentShares: { [memberId: number]: string } = {};
     let settleFromMember = 0;
     let settleToMember = 0;
     let settleAmount = "";
@@ -195,19 +197,20 @@
     async function addExpense() {
         if (!expenseDescription || !expenseAmount || selectedMembers.length === 0) return;
 
+        if (splitMode === "percent" && Math.abs(getPercentRemaining()) > 0.01) {
+            error = "Percentages must add up to 100%";
+            return;
+        }
+
         try {
-            const customSharesArray = !splitEvenly
-                ? selectedMembers.map((memberId) => ({
-                      memberId,
-                      amount: Number.parseFloat(customShares[memberId] || "0"),
-                  }))
-                : undefined;
+            const normalizedAmount = Number.parseFloat(expenseAmount);
+            const customSharesArray = buildCustomSharesArray(normalizedAmount);
 
             await api.expenses.create({
                 groupId,
                 description: expenseDescription,
                 note: expenseNote || undefined,
-                amount: Number.parseFloat(expenseAmount),
+                amount: normalizedAmount,
                 currency: expenseCurrency,
                 createdAt: expenseDate || undefined,
                 paidBy: expensePaidBy || undefined,
@@ -394,6 +397,7 @@
     }
 
     function calculateCustomSharesFromItems() {
+        if (splitMode !== "amounts") return;
         const memberShares: { [memberId: number]: number } = {};
 
         for (const item of receiptItems) {
@@ -554,6 +558,7 @@
         if (selectedMembers.includes(memberId)) {
             selectedMembers = selectedMembers.filter((id) => id !== memberId);
             delete customShares[memberId];
+            delete percentShares[memberId];
         } else {
             selectedMembers = [...selectedMembers, memberId];
         }
@@ -576,6 +581,16 @@
         return total - allocated;
     }
 
+    function getPercentTotal(): number {
+        return selectedMembers.reduce((sum, memberId) => {
+            return sum + Number.parseFloat(percentShares[memberId] || "0");
+        }, 0);
+    }
+
+    function getPercentRemaining(): number {
+        return 100 - getPercentTotal();
+    }
+
     function distributeEvenly() {
         if (!expenseAmount || selectedMembers.length === 0) return;
         const total = Number.parseFloat(expenseAmount);
@@ -584,6 +599,77 @@
         selectedMembers.forEach((memberId) => {
             customShares[memberId] = perPerson.toFixed(2);
         });
+    }
+
+    function distributePercentEvenly() {
+        if (selectedMembers.length === 0) return;
+        const perPerson = 100 / selectedMembers.length;
+        percentShares = {};
+        let allocated = 0;
+        selectedMembers.forEach((memberId, index) => {
+            if (index === selectedMembers.length - 1) {
+                const remaining = 100 - allocated;
+                percentShares[memberId] = remaining.toFixed(2);
+                return;
+            }
+            const value = Number.parseFloat(perPerson.toFixed(2));
+            allocated += value;
+            percentShares[memberId] = value.toFixed(2);
+        });
+    }
+
+    function setSplitMode(nextMode: "amounts" | "percent") {
+        if (splitMode === nextMode) return;
+        splitMode = nextMode;
+        error = "";
+
+        if (nextMode === "percent") {
+            const total = Number.parseFloat(expenseAmount || "0");
+            percentShares = {};
+
+            if (selectedMembers.length > 0 && total > 0 && Object.keys(customShares).length > 0) {
+                selectedMembers.forEach((memberId) => {
+                    const amount = Number.parseFloat(customShares[memberId] || "0");
+                    percentShares[memberId] = ((amount / total) * 100).toFixed(2);
+                });
+            }
+
+            if (Object.keys(percentShares).length === 0 && selectedMembers.length > 0) {
+                distributePercentEvenly();
+            }
+        }
+    }
+
+    function buildCustomSharesArray(totalAmount: number) {
+        if (splitMode === "percent") {
+            const shares = selectedMembers.map((memberId) => {
+                const percent = Number.parseFloat(percentShares[memberId] || "0");
+                const amount = (totalAmount * percent) / 100;
+                return {
+                    memberId,
+                    amount: Number.parseFloat(amount.toFixed(2)),
+                };
+            });
+
+            if (shares.length > 0) {
+                const allocated = shares.reduce((sum, share) => sum + share.amount, 0);
+                const diff = Number.parseFloat((totalAmount - allocated).toFixed(2));
+                shares[shares.length - 1].amount = Number.parseFloat(
+                    (shares[shares.length - 1].amount + diff).toFixed(2),
+                );
+            }
+
+            return shares;
+        }
+
+        if (!splitEvenly) {
+            return selectedMembers.map((memberId) => ({
+                memberId,
+                amount: Number.parseFloat(customShares[memberId] || "0"),
+            }));
+        }
+
+        return undefined;
     }
 
     function formatDate(date: Date) {
@@ -616,11 +702,13 @@
         editingExpenseId = expense.id;
         expenseDescription = expense.description;
         expenseNote = expense.note || "";
+        splitMode = "amounts";
         expenseAmount = expense.amount.toString();
         expenseCurrency = expense.currency || "EUR";
         expenseDate = new Date(expense.createdAt).toISOString().split("T")[0];
         expensePaidBy = expense.paidBy;
         selectedMembers = expense.shares.map((s) => s.member.id);
+        percentShares = {};
 
         // Check if shares are even
         const shareAmount = expense.amount / expense.shares.length;
@@ -692,18 +780,19 @@
     async function updateExpense() {
         if (!expenseDescription || !expenseAmount || selectedMembers.length === 0 || !editingExpenseId) return;
 
+        if (splitMode === "percent" && Math.abs(getPercentRemaining()) > 0.01) {
+            error = "Percentages must add up to 100%";
+            return;
+        }
+
         try {
-            const customSharesArray = !splitEvenly
-                ? selectedMembers.map((memberId) => ({
-                      memberId,
-                      amount: Number.parseFloat(customShares[memberId] || "0"),
-                  }))
-                : undefined;
+            const normalizedAmount = Number.parseFloat(expenseAmount);
+            const customSharesArray = buildCustomSharesArray(normalizedAmount);
 
             await api.expenses.update(editingExpenseId, {
                 description: expenseDescription,
                 note: expenseNote || undefined,
-                amount: Number.parseFloat(expenseAmount),
+                amount: normalizedAmount,
                 currency: expenseCurrency,
                 createdAt: expenseDate || undefined,
                 paidBy: expensePaidBy || undefined,
@@ -745,6 +834,8 @@
         selectedMembers = [];
         splitEvenly = true;
         customShares = {};
+        splitMode = "amounts";
+        percentShares = {};
         receiptImage = null;
         receiptImageUrl = null;
         receiptItems = [];
@@ -1616,6 +1707,32 @@
                     +
                 </div>
             </div>
+            <div class="mb-4">
+                <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Split category</div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        on:click={() => setSplitMode("amounts")}
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'amounts'
+                            ? 'bg-primary text-dark'
+                            : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                    >
+                        Amounts
+                    </button>
+                    <button
+                        type="button"
+                        on:click={() => setSplitMode("percent")}
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'percent'
+                            ? 'bg-primary text-dark'
+                            : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                    >
+                        Percentage
+                    </button>
+                </div>
+                {#if splitMode === "percent"}
+                    <p class="mt-2 text-xs text-gray-400">Percentages must total 100%.</p>
+                {/if}
+            </div>
             <form on:submit|preventDefault={addExpense} class="space-y-4">
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-300 mb-2"> Description </label>
@@ -1745,7 +1862,7 @@
                         <div class="text-xs text-gray-400 mt-2">Uploading...</div>
                     {/if}
                 </div>
-                {#if receiptItems.length > 0}
+                {#if receiptItems.length > 0 && splitMode === "amounts"}
                     <div class="border border-dark-100 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-medium text-white">Receipt Items</h4>
@@ -1894,7 +2011,7 @@
                 {/if}
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-300"> Split with </label>
+                        <label class="block text-sm font-medium text-gray-300">Split with</label>
                         <button
                             type="button"
                             on:click={selectAllMembers}
@@ -1920,28 +2037,13 @@
                     </div>
                     {#if selectedMembers.length > 0}
                         <div class="mt-3 p-3 bg-dark-200 rounded-lg">
-                            <label class="flex items-center space-x-2 mb-3">
-                                <input
-                                    type="checkbox"
-                                    bind:checked={splitEvenly}
-                                    class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
-                                />
-                                <span class="text-sm text-gray-300">Split evenly</span>
-                            </label>
-                            {#if splitEvenly}
-                                <p class="text-xs text-gray-400">
-                                    {selectedMembers.length} member(s) selected • {formatCurrency(
-                                        parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )}
-                                    {expenseCurrency} each
-                                </p>
-                            {:else}
+                            {#if splitMode === "percent"}
                                 <div class="space-y-2 mb-2">
                                     <div class="flex justify-between items-center">
-                                        <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                        <span class="text-xs font-medium text-gray-300">Custom percentages</span>
                                         <button
                                             type="button"
-                                            on:click={distributeEvenly}
+                                            on:click={distributePercentEvenly}
                                             class="text-xs text-primary hover:text-primary-400"
                                         >
                                             Auto-fill evenly
@@ -1950,17 +2052,25 @@
                                     {#each selectedMembers as memberId}
                                         {@const member = allMembers.find((m) => m.id === memberId)}
                                         {#if member}
+                                            {@const total = Number.parseFloat(expenseAmount || "0")}
+                                            {@const percent = Number.parseFloat(percentShares[memberId] || "0")}
                                             <div class="flex items-center space-x-2">
-                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span
-                                                >
-                                                <input
-                                                    type="number"
-                                                    bind:value={customShares[memberId]}
-                                                    step="0.01"
-                                                    min="0"
-                                                    placeholder="0.00"
-                                                    class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
-                                                />
+                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span>
+                                                <span class="text-[11px] text-gray-500">
+                                                    {formatCurrency((total * percent) / 100)} {expenseCurrency}
+                                                </span>
+                                                <div class="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        bind:value={percentShares[memberId]}
+                                                        step="0.01"
+                                                        min="0"
+                                                        max="100"
+                                                        placeholder="0"
+                                                        class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                    />
+                                                    <span class="text-xs text-gray-500">%</span>
+                                                </div>
                                             </div>
                                         {/if}
                                     {/each}
@@ -1968,17 +2078,79 @@
                                 <div class="text-xs space-y-1">
                                     <div class="flex justify-between text-gray-400">
                                         <span>Total allocated:</span>
-                                        <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                        <span>{getPercentTotal().toFixed(2)}%</span>
                                     </div>
                                     <div
-                                        class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                        class="flex justify-between {Math.abs(getPercentRemaining()) < 0.01
                                             ? 'text-green-400'
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                        <span>{getPercentRemaining().toFixed(2)}%</span>
                                     </div>
                                 </div>
+                            {:else}
+                                <label class="flex items-center space-x-2 mb-3">
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={splitEvenly}
+                                        class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
+                                    />
+                                    <span class="text-sm text-gray-300">Split evenly</span>
+                                </label>
+                                {#if splitEvenly}
+                                    <p class="text-xs text-gray-400">
+                                        {selectedMembers.length} member(s) selected • {formatCurrency(
+                                            parseFloat(expenseAmount || "0") / selectedMembers.length,
+                                        )}
+                                        {expenseCurrency} each
+                                    </p>
+                                {:else}
+                                    <div class="space-y-2 mb-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                            <button
+                                                type="button"
+                                                on:click={distributeEvenly}
+                                                class="text-xs text-primary hover:text-primary-400"
+                                            >
+                                                Auto-fill evenly
+                                            </button>
+                                        </div>
+                                        {#each selectedMembers as memberId}
+                                            {@const member = allMembers.find((m) => m.id === memberId)}
+                                            {#if member}
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-xs text-gray-400 flex-1">
+                                                        {getMemberName(member)}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        bind:value={customShares[memberId]}
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                        class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                    />
+                                                </div>
+                                            {/if}
+                                        {/each}
+                                    </div>
+                                    <div class="text-xs space-y-1">
+                                        <div class="flex justify-between text-gray-400">
+                                            <span>Total allocated:</span>
+                                            <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                        </div>
+                                        <div
+                                            class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                                ? 'text-green-400'
+                                                : 'text-red-400'}"
+                                        >
+                                            <span>Remaining:</span>
+                                            <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                        </div>
+                                    </div>
+                                {/if}
                             {/if}
                         </div>
                     {/if}
@@ -2388,18 +2560,44 @@
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Edit</div>
-                    <h3 class="text-2xl font-bold text-white">Edit Expense</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Edit</div>
+                        <h3 class="text-2xl font-bold text-white">Edit Expense</h3>
+                    </div>
+                    <div
+                        class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                    >
+                        ED
+                    </div>
                 </div>
-                <div
-                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
-                >
-                    ED
+                <div class="mb-4">
+                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Split category</div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            on:click={() => setSplitMode("amounts")}
+                            class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'amounts'
+                                ? 'bg-primary text-dark'
+                                : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                        >
+                            Amounts
+                        </button>
+                        <button
+                            type="button"
+                            on:click={() => setSplitMode("percent")}
+                            class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'percent'
+                                ? 'bg-primary text-dark'
+                                : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                        >
+                            Percentage
+                        </button>
+                    </div>
+                    {#if splitMode === "percent"}
+                        <p class="mt-2 text-xs text-gray-400">Percentages must total 100%.</p>
+                    {/if}
                 </div>
-            </div>
-            <form on:submit|preventDefault={updateExpense} class="space-y-4">
+                <form on:submit|preventDefault={updateExpense} class="space-y-4">
                 <div>
                     <label for="editDescription" class="block text-sm font-medium text-gray-300 mb-2">
                         Description
@@ -2534,7 +2732,7 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-300"> Split with </label>
+                        <label class="block text-sm font-medium text-gray-300">Split with</label>
                         <button
                             type="button"
                             on:click={selectAllMembers}
@@ -2560,28 +2758,13 @@
                     </div>
                     {#if selectedMembers.length > 0}
                         <div class="mt-3 p-3 bg-dark-200 rounded-lg">
-                            <label class="flex items-center space-x-2 mb-3">
-                                <input
-                                    type="checkbox"
-                                    bind:checked={splitEvenly}
-                                    class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
-                                />
-                                <span class="text-sm text-gray-300">Split evenly</span>
-                            </label>
-                            {#if splitEvenly}
-                                <p class="text-xs text-gray-400">
-                                    {selectedMembers.length} member(s) selected • {formatCurrency(
-                                        parseFloat(expenseAmount || "0") / selectedMembers.length,
-                                    )}
-                                    {expenseCurrency} each
-                                </p>
-                            {:else}
+                            {#if splitMode === "percent"}
                                 <div class="space-y-2 mb-2">
                                     <div class="flex justify-between items-center">
-                                        <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                        <span class="text-xs font-medium text-gray-300">Custom percentages</span>
                                         <button
                                             type="button"
-                                            on:click={distributeEvenly}
+                                            on:click={distributePercentEvenly}
                                             class="text-xs text-primary hover:text-primary-400"
                                         >
                                             Auto-fill evenly
@@ -2590,17 +2773,25 @@
                                     {#each selectedMembers as memberId}
                                         {@const member = allMembers.find((m) => m.id === memberId)}
                                         {#if member}
+                                            {@const total = Number.parseFloat(expenseAmount || "0")}
+                                            {@const percent = Number.parseFloat(percentShares[memberId] || "0")}
                                             <div class="flex items-center space-x-2">
-                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span
-                                                >
-                                                <input
-                                                    type="number"
-                                                    bind:value={customShares[memberId]}
-                                                    step="0.01"
-                                                    min="0"
-                                                    placeholder="0.00"
-                                                    class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
-                                                />
+                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span>
+                                                <span class="text-[11px] text-gray-500">
+                                                    {formatCurrency((total * percent) / 100)} {expenseCurrency}
+                                                </span>
+                                                <div class="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        bind:value={percentShares[memberId]}
+                                                        step="0.01"
+                                                        min="0"
+                                                        max="100"
+                                                        placeholder="0"
+                                                        class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                    />
+                                                    <span class="text-xs text-gray-500">%</span>
+                                                </div>
                                             </div>
                                         {/if}
                                     {/each}
@@ -2608,17 +2799,79 @@
                                 <div class="text-xs space-y-1">
                                     <div class="flex justify-between text-gray-400">
                                         <span>Total allocated:</span>
-                                        <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                        <span>{getPercentTotal().toFixed(2)}%</span>
                                     </div>
                                     <div
-                                        class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                        class="flex justify-between {Math.abs(getPercentRemaining()) < 0.01
                                             ? 'text-green-400'
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                        <span>{getPercentRemaining().toFixed(2)}%</span>
                                     </div>
                                 </div>
+                            {:else}
+                                <label class="flex items-center space-x-2 mb-3">
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={splitEvenly}
+                                        class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
+                                    />
+                                    <span class="text-sm text-gray-300">Split evenly</span>
+                                </label>
+                                {#if splitEvenly}
+                                    <p class="text-xs text-gray-400">
+                                        {selectedMembers.length} member(s) selected • {formatCurrency(
+                                            parseFloat(expenseAmount || "0") / selectedMembers.length,
+                                        )}
+                                        {expenseCurrency} each
+                                    </p>
+                                {:else}
+                                    <div class="space-y-2 mb-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                            <button
+                                                type="button"
+                                                on:click={distributeEvenly}
+                                                class="text-xs text-primary hover:text-primary-400"
+                                            >
+                                                Auto-fill evenly
+                                            </button>
+                                        </div>
+                                        {#each selectedMembers as memberId}
+                                            {@const member = allMembers.find((m) => m.id === memberId)}
+                                            {#if member}
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-xs text-gray-400 flex-1">
+                                                        {getMemberName(member)}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        bind:value={customShares[memberId]}
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                        class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
+                                                    />
+                                                </div>
+                                            {/if}
+                                        {/each}
+                                    </div>
+                                    <div class="text-xs space-y-1">
+                                        <div class="flex justify-between text-gray-400">
+                                            <span>Total allocated:</span>
+                                            <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                        </div>
+                                        <div
+                                            class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                                ? 'text-green-400'
+                                                : 'text-red-400'}"
+                                        >
+                                            <span>Remaining:</span>
+                                            <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                        </div>
+                                    </div>
+                                {/if}
                             {/if}
                         </div>
                     {/if}
@@ -2638,7 +2891,7 @@
                 {/if}
 
                 <!-- Receipt Items Section -->
-                {#if receiptItems.length > 0}
+                {#if receiptItems.length > 0 && splitMode === "amounts"}
                     <div class="border border-dark-100 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-3">
                             <h4 class="text-sm font-medium text-white">Receipt Items</h4>
