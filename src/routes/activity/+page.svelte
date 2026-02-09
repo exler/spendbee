@@ -1,8 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
-    import { user, logout } from "$lib/stores/auth";
+    import { user } from "$lib/stores/auth";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
+    import MobileNavbar from "$lib/components/MobileNavbar.svelte";
 
     interface ActivityItem {
         id: number;
@@ -50,10 +51,6 @@
         }
     }
 
-    function handleLogout() {
-        logout();
-    }
-
     function iconFor(type: string) {
         if (type.startsWith("settlement")) return "settlement";
         return "expense";
@@ -76,17 +73,12 @@
             <LeftSidebar active="activity" />
 
             <main class="flex-1">
-                <div class="pt-6 mb-6 flex items-center justify-between">
+                <MobileNavbar backHref="/groups" backLabel="Back to dashboard" />
+                <div class="hidden lg:flex pt-6 mb-6 items-center justify-between">
                     <a href="/groups" class="inline-flex items-center gap-3 hover:opacity-80 transition">
                         <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
                         <span class="text-2xl font-semibold">Spendbee</span>
                     </a>
-                    <button
-                        on:click={handleLogout}
-                        class="px-4 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition"
-                    >
-                        Logout
-                    </button>
                 </div>
 
                 <div class="bg-dark-300/60 border border-dark-100/70 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.25)]">

@@ -7,8 +7,7 @@
     import AttachmentPreview from "$lib/components/AttachmentPreview.svelte";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import RightSidebar from "$lib/components/RightSidebar.svelte";
-
-    const currentYear = new Date().getFullYear();
+    import MobileNavbar from "$lib/components/MobileNavbar.svelte";
 
     interface GroupMember {
         id: number;
@@ -613,7 +612,6 @@
         return `/api/receipts/view/${encodeURIComponent(avatar)}`;
     }
 
-
     function startEditExpense(expense: Expense) {
         editingExpenseId = expense.id;
         expenseDescription = expense.description;
@@ -797,8 +795,9 @@
             </LeftSidebar>
 
             <main class="flex-1">
+                <MobileNavbar backHref="/groups" backLabel="Back to groups" />
                 <div class="pt-6">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="hidden lg:flex items-center justify-between mb-6">
                         <a href="/groups" class="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path
@@ -809,10 +808,6 @@
                                 />
                             </svg>
                             Back to Groups
-                        </a>
-                        <a href="/groups" class="inline-flex items-center gap-2 hover:opacity-80 transition">
-                            <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-7 h-7" />
-                            <span class="text-base font-semibold">Spendbee</span>
                         </a>
                     </div>
 
@@ -1411,7 +1406,9 @@
                                                         on:change={handleGroupImageChange}
                                                     />
                                                 </label>
-                                                <div class="text-xs text-gray-500">JPG, PNG, GIF, or WebP. Max 8MB.</div>
+                                                <div class="text-xs text-gray-500">
+                                                    JPG, PNG, GIF, or WebP. Max 8MB.
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1507,7 +1504,6 @@
                             {/if}
                         {/if}
                     {/if}
-
                 </div>
             </main>
 

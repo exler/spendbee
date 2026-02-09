@@ -1,13 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
-    import { user, logout } from "$lib/stores/auth";
-    import { notifications, unreadCount } from "$lib/stores/notifications";
+    import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import RightSidebar from "$lib/components/RightSidebar.svelte";
+    import MobileNavbar from "$lib/components/MobileNavbar.svelte";
 
-    const currentYear = new Date().getFullYear();
 
     interface Group {
         id: number;
@@ -25,7 +24,6 @@
     let groups: Group[] = [];
     let loading = true;
     let showCreateModal = false;
-    let showNotifications = false;
     let showArchivedGroups = false;
     let newGroupName = "";
     let newGroupDescription = "";
@@ -40,22 +38,8 @@
         }
         loadGroups();
         loadCurrencies();
-        loadNotifications();
-
-        // Poll for notifications every 30 seconds
-        const interval = setInterval(loadNotifications, 30000);
-        return () => clearInterval(interval);
     });
 
-    async function loadNotifications() {
-        try {
-            const [notifs, count] = await Promise.all([api.notifications.list(), api.notifications.unreadCount()]);
-            notifications.set(notifs);
-            unreadCount.set(count.count);
-        } catch (e) {
-            console.error("Failed to load notifications:", e);
-        }
-    }
 
     async function loadCurrencies() {
         try {
@@ -99,40 +83,7 @@
         }
     }
 
-    async function acceptInvitation(notificationId: number) {
-        try {
-            const result = await api.notifications.accept(notificationId);
-            await loadNotifications();
-            await loadGroups();
-            if (result.groupUuid) {
-                goto(`/groups/${result.groupUuid}`);
-            }
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to accept invitation";
-        }
-    }
 
-    async function declineInvitation(notificationId: number) {
-        try {
-            await api.notifications.decline(notificationId);
-            await loadNotifications();
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to decline invitation";
-        }
-    }
-
-    async function markAsRead(notificationId: number) {
-        try {
-            await api.notifications.markAsRead(notificationId);
-            await loadNotifications();
-        } catch (e) {
-            console.error("Failed to mark as read:", e);
-        }
-    }
-
-    function handleLogout() {
-        logout();
-    }
 </script>
 
 <svelte:head>
@@ -155,94 +106,12 @@
             </LeftSidebar>
 
             <main class="flex-1">
-                <div class="pt-6 mb-6 flex items-center justify-between">
+                <MobileNavbar />
+                <div class="hidden lg:flex pt-6 mb-6 items-center justify-between">
                     <a href="/groups" class="inline-flex items-center gap-3 hover:opacity-80 transition">
                         <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
                         <span class="text-2xl font-semibold">Spendbee</span>
                     </a>
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <button
-                                on:click={() => (showNotifications = !showNotifications)}
-                                class="relative px-3 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                                    />
-                                </svg>
-                                {#if $unreadCount > 0}
-                                    <span
-                                        class="absolute -top-1 -right-1 bg-primary text-dark text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                                    >
-                                        {$unreadCount}
-                                    </span>
-                                {/if}
-                            </button>
-
-                            {#if showNotifications}
-                                <div
-                                    class="absolute right-0 mt-2 w-96 bg-dark-300 rounded-2xl shadow-xl border border-dark-100 z-50 max-h-96 overflow-y-auto"
-                                >
-                                    {#if $notifications.length === 0}
-                                        <div class="p-4 text-center text-gray-400">No notifications</div>
-                                    {:else}
-                                        <div class="divide-y divide-dark-100">
-                                            {#each $notifications as notification}
-                                                <div
-                                                    class="p-4 hover:bg-dark-200 {!notification.read
-                                                        ? 'bg-dark-200/50'
-                                                        : ''}"
-                                                >
-                                                    <div class="flex justify-between items-start mb-2">
-                                                        <h4 class="font-semibold text-white">
-                                                            {notification.title}
-                                                        </h4>
-                                                        {#if !notification.read}
-                                                            <button
-                                                                on:click={() => markAsRead(notification.id)}
-                                                                class="text-xs text-primary hover:text-primary-400"
-                                                            >
-                                                                Mark read
-                                                            </button>
-                                                        {/if}
-                                                    </div>
-                                                    <p class="text-sm text-gray-300 mb-3">
-                                                        {notification.message}
-                                                    </p>
-                                                    {#if notification.type === "group_invite"}
-                                                        <div class="flex gap-2">
-                                                            <button
-                                                                on:click={() => acceptInvitation(notification.id)}
-                                                                class="flex-1 bg-primary text-dark py-1 px-3 rounded text-sm font-semibold hover:bg-primary-400 transition"
-                                                            >
-                                                                Accept
-                                                            </button>
-                                                            <button
-                                                                on:click={() => declineInvitation(notification.id)}
-                                                                class="flex-1 bg-dark-100 text-white py-1 px-3 rounded text-sm hover:bg-dark transition"
-                                                            >
-                                                                Decline
-                                                            </button>
-                                                        </div>
-                                                    {/if}
-                                                </div>
-                                            {/each}
-                                        </div>
-                                    {/if}
-                                </div>
-                            {/if}
-                        </div>
-                        <button
-                            on:click={handleLogout}
-                            class="px-4 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition"
-                        >
-                            Logout
-                        </button>
-                    </div>
                 </div>
 
                 <div

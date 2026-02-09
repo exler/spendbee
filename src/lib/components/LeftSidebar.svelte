@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { user } from "$lib/stores/auth";
+    import { user, logout } from "$lib/stores/auth";
 
     export let active: "groups" | "activity" | "account" = "groups";
 
@@ -69,6 +69,12 @@
                 <div>
                     <div class="text-lg font-semibold text-white">{$user?.name}</div>
                     <div class="text-sm text-gray-400">{$user?.email || "Signed in"}</div>
+                    <button
+                        on:click={() => logout()}
+                        class="mt-3 w-full rounded-lg border border-dark-100/70 px-3 py-2 text-xs uppercase tracking-[0.25em] text-gray-300 hover:bg-dark-200/70 hover:text-white transition"
+                    >
+                        Logout
+                    </button>
                 </div>
             </div>
         </div>
