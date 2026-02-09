@@ -1127,8 +1127,8 @@
                             <div class="space-y-3">
                                 {#each balances as balance}
                                     <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <div class="flex items-center gap-3 flex-1">
+                                        <div class="flex items-start gap-4 mb-2">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
                                                 {#if balance.avatarUrl}
                                                     <img
                                                         src={`/api/receipts/view/${encodeURIComponent(
@@ -1144,7 +1144,7 @@
                                                         {balance.memberName.slice(0, 1).toUpperCase()}
                                                     </div>
                                                 {/if}
-                                                <div>
+                                                <div class="min-w-0">
                                                     <div class="font-semibold text-white">{balance.memberName}</div>
                                                     {#if balance.isGuest}
                                                         <div class="text-xs text-gray-500 mb-2">Guest member</div>
@@ -1181,36 +1181,27 @@
                                                         </div>
                                                     {/if}
                                                 </div>
-                                                <div class="text-right">
-                                                    <div
-                                                        class="text-xl font-bold {balance.balance > 0
-                                                            ? 'text-green-400'
-                                                            : balance.balance < 0
-                                                              ? 'text-red-400'
-                                                              : 'text-gray-400'}"
-                                                    >
-                                                        {#if balance.balance > 0}
-                                                            +{formatCurrency(balance.balance)}
-                                                        {:else if balance.balance < 0}
-                                                            -{formatCurrency(Math.abs(balance.balance))}
-                                                        {:else}
-                                                            Settled
-                                                        {/if}
-                                                    </div>
+                                            </div>
+                                            <div class="text-right shrink-0">
+                                                <div
+                                                    class="text-xl font-bold {balance.balance > 0
+                                                        ? 'text-green-400'
+                                                        : balance.balance < 0
+                                                          ? 'text-red-400'
+                                                          : 'text-gray-400'}"
+                                                >
+                                                    {#if balance.balance > 0}
+                                                        +{formatCurrency(balance.balance)}
+                                                    {:else if balance.balance < 0}
+                                                        -{formatCurrency(Math.abs(balance.balance))}
+                                                    {:else}
+                                                        Settled
+                                                    {/if}
                                                 </div>
                                                 <div class="text-xs text-gray-500 mt-1">
                                                     {group?.baseCurrency || "EUR"}
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="text-sm text-gray-400 border-t border-dark-100 pt-2">
-                                            {#if balance.balance > 0}
-                                                Is owed in total
-                                            {:else if balance.balance < 0}
-                                                Owes in total
-                                            {:else}
-                                                All settled up
-                                            {/if}
                                         </div>
                                     </div>
                                 {/each}
