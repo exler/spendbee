@@ -5,6 +5,8 @@
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import AttachmentPreview from "$lib/components/AttachmentPreview.svelte";
+    import LeftSidebar from "$lib/components/LeftSidebar.svelte";
+    import RightSidebar from "$lib/components/RightSidebar.svelte";
 
     const currentYear = new Date().getFullYear();
 
@@ -757,45 +759,27 @@
 </svelte:head>
 
 <div class="min-h-screen bg-dark-500 text-white">
-    <div class="max-w-6xl mx-auto px-4 pb-12">
+    <div class="max-w-7xl mx-auto px-4 pb-12">
         <div class="flex min-h-screen gap-6">
-            <aside
-                class="hidden lg:flex w-64 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
-                <a href="/groups" class="inline-flex items-center gap-3">
-                    <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
-                    <span class="text-xl font-semibold">Spendbee</span>
-                </a>
-                <div class="mt-8 space-y-1 text-sm">
-                    <a
-                        href="/groups"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Dashboard
-                    </a>
-                    <a
-                        href="/activity"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Recent activity
-                    </a>
-                    <a
-                        href="/account"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Account
-                    </a>
-                </div>
+            <LeftSidebar active="groups">
                 {#if group}
-                    <div class="mt-10">
+                    <div>
                         <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Current group</div>
                         <div class="mt-3 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
                             <div class="flex items-center gap-3">
-                                <div
-                                    class="h-10 w-10 rounded-xl bg-primary text-dark flex items-center justify-center font-semibold"
-                                >
-                                    {group.name?.slice(0, 1) || "G"}
-                                </div>
+                                {#if group.imageUrl}
+                                    <img
+                                        src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
+                                        alt="Group image"
+                                        class="h-10 w-10 rounded-xl object-cover border border-dark-100"
+                                    />
+                                {:else}
+                                    <div
+                                        class="h-10 w-10 rounded-xl bg-primary text-dark flex items-center justify-center font-semibold"
+                                    >
+                                        {group.name?.slice(0, 1) || "G"}
+                                    </div>
+                                {/if}
                                 <div>
                                     <div class="font-semibold text-white">{group.name}</div>
                                     <div class="text-xs text-gray-400">{allMembers.length} members</div>
@@ -810,8 +794,7 @@
                         </div>
                     </div>
                 {/if}
-                <div class="mt-auto text-xs text-gray-500">Split smarter together.</div>
-            </aside>
+            </LeftSidebar>
 
             <main class="flex-1">
                 <div class="pt-6">
@@ -1525,26 +1508,10 @@
                         {/if}
                     {/if}
 
-                    <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
-                        <p>
-                            &copy; {currentYear} Kamil Marut
-                            <span class="mx-2">•</span>
-                            <a
-                                href="https://github.com/exler/spendbee"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="text-primary hover:text-primary-400 transition"
-                            >
-                                GitHub
-                            </a>
-                        </p>
-                    </div>
                 </div>
             </main>
 
-            <aside
-                class="hidden xl:flex w-80 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
+            <RightSidebar>
                 <div class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
                     <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Group balances</div>
                     {#if balances.length === 0}
@@ -1622,7 +1589,7 @@
                         </button>
                     </div>
                 </div>
-            </aside>
+            </RightSidebar>
         </div>
     </div>
 </div>

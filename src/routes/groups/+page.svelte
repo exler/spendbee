@@ -4,6 +4,8 @@
     import { user, logout } from "$lib/stores/auth";
     import { notifications, unreadCount } from "$lib/stores/notifications";
     import { api } from "$lib/api";
+    import LeftSidebar from "$lib/components/LeftSidebar.svelte";
+    import RightSidebar from "$lib/components/RightSidebar.svelte";
 
     const currentYear = new Date().getFullYear();
 
@@ -30,13 +32,6 @@
     let newGroupCurrency = "EUR";
     let error = "";
     let supportedCurrencies: string[] = [];
-
-    let avatarPreviewUrl: string | null = null;
-
-    $: {
-        const userAvatar = ($user as { avatarUrl?: string | null } | null)?.avatarUrl;
-        avatarPreviewUrl = userAvatar ? `/api/receipts/view/${encodeURIComponent(userAvatar)}` : null;
-    }
 
     onMount(() => {
         if (!$user) {
@@ -145,36 +140,10 @@
 </svelte:head>
 
 <div class="min-h-screen bg-dark-500 text-white">
-    <div class="max-w-6xl mx-auto px-4 pb-12">
+    <div class="max-w-7xl mx-auto px-4 pb-12">
         <div class="flex min-h-screen gap-6">
-            <aside
-                class="hidden lg:flex w-64 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
-                <a href="/groups" class="inline-flex items-center gap-3">
-                    <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
-                    <span class="text-xl font-semibold">Spendbee</span>
-                </a>
-                <div class="mt-8 space-y-1 text-sm">
-                    <a
-                        href="/groups"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Dashboard
-                    </a>
-                    <a
-                        href="/activity"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Recent activity
-                    </a>
-                    <a
-                        href="/account"
-                        class="flex items-center gap-2 rounded-lg px-3 py-2 text-gray-200 hover:bg-dark-300/70"
-                    >
-                        Account
-                    </a>
-                </div>
-                <div class="mt-10 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+            <LeftSidebar active="groups">
+                <div class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
                     <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Quick actions</div>
                     <button
                         on:click={() => (showCreateModal = true)}
@@ -183,8 +152,7 @@
                         Create group
                     </button>
                 </div>
-                <div class="mt-auto text-xs text-gray-500">Split smarter together.</div>
-            </aside>
+            </LeftSidebar>
 
             <main class="flex-1">
                 <div class="pt-6 mb-6 flex items-center justify-between">
@@ -398,88 +366,9 @@
                     </div>
                 {/if}
 
-                <div class="mt-12 pt-6 border-t border-dark-100 text-center text-sm text-gray-400">
-                    <p>
-                        &copy; {currentYear} Kamil Marut
-                        <span class="mx-2">•</span>
-                        <a
-                            href="https://github.com/exler/spendbee"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-primary hover:text-primary-400 transition"
-                        >
-                            GitHub
-                        </a>
-                    </p>
-                </div>
             </main>
 
-            <aside
-                class="hidden xl:flex w-80 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
-                <div class="bg-dark-300/50 p-5 rounded-2xl border border-dark-100/70">
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Recent activity</div>
-                    {#if $notifications.length > 0}
-                        <div class="mt-4 space-y-3">
-                            {#each $notifications.slice(0, 4) as notification}
-                                <div class="flex items-start gap-3">
-                                    <div
-                                        class="h-9 w-9 rounded-xl bg-dark-200 flex items-center justify-center text-sm font-semibold text-primary"
-                                    >
-                                        {notification.title.slice(0, 1).toUpperCase()}
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="text-sm text-white">{notification.title}</div>
-                                        <div class="text-xs text-gray-500">{notification.message}</div>
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    {:else}
-                        <div class="mt-4 space-y-3 text-sm text-gray-400">
-                            <div>Activity feed will show new expenses and settlements here.</div>
-                            <div>Invite friends to start seeing updates.</div>
-                        </div>
-                    {/if}
-                </div>
-
-                <div class="mt-6 bg-dark-300/50 p-5 rounded-2xl border border-dark-100/70">
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Account</div>
-                    <div class="mt-4 flex items-center gap-3">
-                        {#if avatarPreviewUrl}
-                            <img
-                                src={avatarPreviewUrl}
-                                alt="Account avatar"
-                                class="h-12 w-12 rounded-2xl object-cover border border-dark-100"
-                            />
-                        {:else}
-                            <div
-                                class="h-12 w-12 rounded-2xl bg-primary text-dark flex items-center justify-center text-lg font-bold"
-                            >
-                                {$user?.name?.slice(0, 1) || "U"}
-                            </div>
-                        {/if}
-                        <div>
-                            <div class="text-lg font-semibold text-white">{$user?.name}</div>
-                            <div class="text-sm text-gray-400">{$user?.email || "Signed in"}</div>
-                        </div>
-                    </div>
-                    <div class="mt-4 grid gap-2">
-                        <button
-                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
-                            disabled
-                        >
-                            Manage profile (coming soon)
-                        </button>
-                        <button
-                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
-                            disabled
-                        >
-                            Notification settings (coming soon)
-                        </button>
-                    </div>
-                </div>
-            </aside>
+            <RightSidebar />
         </div>
     </div>
 </div>
