@@ -39,6 +39,7 @@ export const GET: RequestHandler = async (event) => {
                 columns: {
                     id: true,
                     name: true,
+                    avatarUrl: true,
                 },
             },
         },
@@ -162,6 +163,7 @@ export const GET: RequestHandler = async (event) => {
             balanceByCurrency: currencyBalances,
             balanceInBaseCurrency: Math.round(balanceInBaseCurrency * 100) / 100,
             isGuest: member.userId === null,
+            avatarUrl: member.user?.avatarUrl || null,
         });
     }
 

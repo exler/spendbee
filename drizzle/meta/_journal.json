@@ -50,6 +50,20 @@
             "when": 1770664564972,
             "tag": "0006_activities",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "6",
+            "when": 1770666317550,
+            "tag": "0007_user_avatars",
+            "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "6",
+            "when": 1770667703901,
+            "tag": "0008_group_images",
+            "breakpoints": true
         }
     ]
 }

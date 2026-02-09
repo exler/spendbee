@@ -45,6 +45,11 @@ export const api = {
                 method: "POST",
                 body: JSON.stringify(data),
             }),
+        uploadImage: (uuid: string, data: { file: string; filename: string }) =>
+            fetchAPI(`/groups/${uuid}/image`, {
+                method: "POST",
+                body: JSON.stringify(data),
+            }),
         update: (uuid: string, data: { name?: string; description?: string; baseCurrency?: string }) =>
             fetchAPI(`/groups/${uuid}`, {
                 method: "PATCH",

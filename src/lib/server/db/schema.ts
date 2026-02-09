@@ -7,6 +7,7 @@ export const users = sqliteTable("users", {
     email: text("email").notNull().unique(),
     password: text("password").notNull(),
     name: text("name").notNull(),
+    avatarUrl: text("avatar_url"),
     createdAt: integer("created_at", { mode: "timestamp" })
         .notNull()
         .$defaultFn(() => new Date()),
@@ -23,6 +24,7 @@ export const groups = sqliteTable(
         name: text("name").notNull(),
         description: text("description"),
         baseCurrency: text("base_currency").default("EUR"),
+        imageUrl: text("image_url"),
         archived: integer("archived", { mode: "boolean" }).notNull().default(false),
         createdBy: integer("created_by")
             .notNull()

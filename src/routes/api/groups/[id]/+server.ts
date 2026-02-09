@@ -30,6 +30,7 @@ export const GET: RequestHandler = async (event) => {
                             id: true,
                             name: true,
                             email: true,
+                            avatarUrl: true,
                         },
                     },
                 },

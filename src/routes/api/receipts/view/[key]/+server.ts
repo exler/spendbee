@@ -10,7 +10,12 @@ export const GET: RequestHandler = async ({ params }) => {
     const key = decodeURIComponent(params.key);
 
     // Validate the key format (basic security check)
-    if (!key.startsWith("receipts/") && !key.startsWith("attachments/")) {
+    if (
+        !key.startsWith("receipts/") &&
+        !key.startsWith("attachments/") &&
+        !key.startsWith("avatars/") &&
+        !key.startsWith("groups/")
+    ) {
         throw error(400, "Invalid file key");
     }
 

@@ -16,6 +16,7 @@
             id: number;
             name: string;
             email: string;
+            avatarUrl?: string | null;
         };
     }
 
@@ -27,6 +28,7 @@
         baseCurrency?: string;
         archived?: boolean;
         createdBy?: number;
+        imageUrl?: string | null;
         members: GroupMember[];
     }
 
@@ -58,6 +60,7 @@
         balanceByCurrency?: CurrencyBalance[];
         balanceInBaseCurrency?: number;
         isGuest?: boolean;
+        avatarUrl?: string | null;
     }
 
     interface Settlement {
@@ -121,6 +124,7 @@
     let editGroupDescription = "";
     let editGroupCurrency = "EUR";
     let settingsSaved = false;
+    let uploadingGroupImage = false;
 
     // Receipt scanning variables
     let showScanReceipt = false;
@@ -503,6 +507,26 @@
         }
     }
 
+    async function handleGroupImageChange(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        if (!input.files?.length || !group) return;
+
+        uploadingGroupImage = true;
+        error = "";
+
+        try {
+            const file = input.files[0];
+            const base64 = await readAsDataUrl(file);
+            const updated = await uploadGroupImage(group.uuid, base64, file.name);
+            group = { ...group, imageUrl: updated.imageUrl };
+        } catch (e) {
+            error = e instanceof Error ? e.message : "Failed to upload group image";
+        } finally {
+            uploadingGroupImage = false;
+            input.value = "";
+        }
+    }
+
     async function toggleArchive() {
         if (!group) return;
 
@@ -580,6 +604,14 @@
         return "Unknown";
     }
 
+    function getMemberAvatar(member: GroupMember) {
+        const avatar = member.user?.avatarUrl;
+        if (!avatar) return null;
+        if (avatar.startsWith("http")) return avatar;
+        return `/api/receipts/view/${encodeURIComponent(avatar)}`;
+    }
+
+
     function startEditExpense(expense: Expense) {
         editingExpenseId = expense.id;
         expenseDescription = expense.description;
@@ -628,6 +660,33 @@
         }
 
         showEditExpense = true;
+    }
+
+    function readAsDataUrl(file: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("Failed to read file"));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function uploadGroupImage(groupUuid: string, file: string, filename: string) {
+        const response = await fetch(`/api/groups/${groupUuid}/image`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ file, filename }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "Failed to upload group image");
+        }
+
+        return response.json();
     }
 
     async function updateExpense() {
@@ -785,11 +844,19 @@
                             <div class="flex flex-wrap items-start justify-between gap-6">
                                 <div class="flex flex-col gap-4">
                                     <div class="flex items-center gap-4">
-                                        <div
-                                            class="h-14 w-14 rounded-2xl bg-primary text-dark flex items-center justify-center text-2xl font-bold"
-                                        >
-                                            {group.name?.slice(0, 1) || "G"}
-                                        </div>
+                                        {#if group.imageUrl}
+                                            <img
+                                                src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
+                                                alt="Group image"
+                                                class="h-14 w-14 rounded-2xl object-cover border border-dark-100"
+                                            />
+                                        {:else}
+                                            <div
+                                                class="h-14 w-14 rounded-2xl bg-primary text-dark flex items-center justify-center text-2xl font-bold"
+                                            >
+                                                {group.name?.slice(0, 1) || "G"}
+                                            </div>
+                                        {/if}
                                         <div>
                                             <div class="flex items-center gap-2">
                                                 <h1 class="text-3xl font-bold text-white">{group.name}</h1>
@@ -937,9 +1004,19 @@
                                                 <div class="flex-1">
                                                     <div class="flex items-center gap-3">
                                                         <div
-                                                            class="h-10 w-10 rounded-xl bg-dark-200 flex items-center justify-center text-sm font-semibold text-primary"
+                                                            class="h-10 w-10 rounded-xl bg-dark-200 flex items-center justify-center text-primary border border-dark-100"
                                                         >
-                                                            {expense.description.slice(0, 1).toUpperCase()}
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                class="w-5 h-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                                ><path
+                                                                    fill="currentColor"
+                                                                    d="M17 2a3 3 0 0 1 3 3v16a1 1 0 0 1-1.555.832l-2.318-1.545l-1.42 1.42a1 1 0 0 1-1.32.083l-.094-.083L12 20.415l-1.293 1.292a1 1 0 0 1-1.32.083l-.094-.083l-1.421-1.42l-2.317 1.545l-.019.012l-.054.03l-.028.017l-.054.023l-.05.023l-.049.015l-.06.019l-.052.009l-.057.011l-.084.006l-.026.003H5l-.049-.003h-.039l-.013-.003h-.016l-.041-.008l-.038-.005l-.015-.005l-.018-.002l-.034-.011l-.04-.01l-.019-.007l-.015-.004l-.029-.013l-.04-.015l-.021-.011l-.013-.005l-.028-.016l-.036-.018l-.014-.01l-.018-.01l-.038-.027l-.022-.014l-.01-.009l-.02-.014l-.045-.041l-.012-.008l-.024-.024l-.035-.039l-.02-.02l-.007-.011l-.011-.012l-.032-.045l-.02-.025l-.012-.019l-.03-.054l-.017-.028l-.023-.054l-.023-.05a1 1 0 0 1-.034-.108l-.01-.057l-.01-.053L4 21V5a3 3 0 0 1 3-3zm-5 3a1 1 0 0 0-1 1a3 3 0 1 0 0 6v2c-.403.013-.75-.18-.934-.5a1 1 0 0 0-1.732 1a3 3 0 0 0 2.505 1.5l.161-.001A1 1 0 1 0 13 16l.176-.005A3 3 0 0 0 13 10V8c.403-.013.75.18.934.5a1 1 0 0 0 1.732-1A3 3 0 0 0 13.161 6H13a1 1 0 0 0-1-1m1 7a1 1 0 0 1 0 2zm-2-4v2a1 1 0 0 1 0-2"
+                                                                /></svg
+                                                            >
                                                         </div>
                                                         <div>
                                                             <h3 class="text-xl font-bold text-white">
@@ -1054,58 +1131,75 @@
                                 {#each balances as balance}
                                     <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
                                         <div class="flex justify-between items-start mb-2">
-                                            <div class="flex-1">
-                                                <div class="font-semibold text-white">{balance.memberName}</div>
-                                                {#if balance.isGuest}
-                                                    <div class="text-xs text-gray-500 mb-2">Guest member</div>
-                                                {/if}
-
-                                                {#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
-                                                    <div class="mt-2 space-y-1">
-                                                        {#each balance.balanceByCurrency as currBal}
-                                                            <div
-                                                                class="text-sm font-medium {currBal.amount > 0
-                                                                    ? 'text-green-400'
-                                                                    : currBal.amount < 0
-                                                                      ? 'text-red-400'
-                                                                      : 'text-gray-400'}"
-                                                            >
-                                                                {currBal.amount > 0
-                                                                    ? "Owed: +"
-                                                                    : "Owes: "}{formatCurrency(
-                                                                    Math.abs(currBal.amount),
-                                                                )}
-                                                                {currBal.currency}
-                                                            </div>
-                                                        {/each}
-                                                        {#if balance.balanceByCurrency.length > 1}
-                                                            <div
-                                                                class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100"
-                                                            >
-                                                                Total in {group?.baseCurrency || "EUR"}: {balance.balance >
-                                                                0
-                                                                    ? "+"
-                                                                    : ""}{formatCurrency(Math.abs(balance.balance))}
-                                                            </div>
-                                                        {/if}
+                                            <div class="flex items-center gap-3 flex-1">
+                                                {#if balance.avatarUrl}
+                                                    <img
+                                                        src={`/api/receipts/view/${encodeURIComponent(
+                                                            balance.avatarUrl,
+                                                        )}`}
+                                                        alt="Member avatar"
+                                                        class="h-10 w-10 rounded-xl object-cover border border-dark-100"
+                                                    />
+                                                {:else}
+                                                    <div
+                                                        class="h-10 w-10 rounded-xl bg-dark-200 text-primary flex items-center justify-center text-sm font-semibold"
+                                                    >
+                                                        {balance.memberName.slice(0, 1).toUpperCase()}
                                                     </div>
                                                 {/if}
-                                            </div>
-                                            <div class="text-right">
-                                                <div
-                                                    class="text-xl font-bold {balance.balance > 0
-                                                        ? 'text-green-400'
-                                                        : balance.balance < 0
-                                                          ? 'text-red-400'
-                                                          : 'text-gray-400'}"
-                                                >
-                                                    {#if balance.balance > 0}
-                                                        +{formatCurrency(balance.balance)}
-                                                    {:else if balance.balance < 0}
-                                                        -{formatCurrency(Math.abs(balance.balance))}
-                                                    {:else}
-                                                        Settled
+                                                <div>
+                                                    <div class="font-semibold text-white">{balance.memberName}</div>
+                                                    {#if balance.isGuest}
+                                                        <div class="text-xs text-gray-500 mb-2">Guest member</div>
                                                     {/if}
+
+                                                    {#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
+                                                        <div class="mt-2 space-y-1">
+                                                            {#each balance.balanceByCurrency as currBal}
+                                                                <div
+                                                                    class="text-sm font-medium {currBal.amount > 0
+                                                                        ? 'text-green-400'
+                                                                        : currBal.amount < 0
+                                                                          ? 'text-red-400'
+                                                                          : 'text-gray-400'}"
+                                                                >
+                                                                    {currBal.amount > 0
+                                                                        ? "Owed: +"
+                                                                        : "Owes: "}{formatCurrency(
+                                                                        Math.abs(currBal.amount),
+                                                                    )}
+                                                                    {currBal.currency}
+                                                                </div>
+                                                            {/each}
+                                                            {#if balance.balanceByCurrency.length > 1}
+                                                                <div
+                                                                    class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100"
+                                                                >
+                                                                    Total in {group?.baseCurrency || "EUR"}: {balance.balance >
+                                                                    0
+                                                                        ? "+"
+                                                                        : ""}{formatCurrency(Math.abs(balance.balance))}
+                                                                </div>
+                                                            {/if}
+                                                        </div>
+                                                    {/if}
+                                                </div>
+                                                <div class="text-right">
+                                                    <div
+                                                        class="text-xl font-bold {balance.balance > 0
+                                                            ? 'text-green-400'
+                                                            : balance.balance < 0
+                                                              ? 'text-red-400'
+                                                              : 'text-gray-400'}"
+                                                    >
+                                                        {#if balance.balance > 0}
+                                                            +{formatCurrency(balance.balance)}
+                                                        {:else if balance.balance < 0}
+                                                            -{formatCurrency(Math.abs(balance.balance))}
+                                                        {:else}
+                                                            Settled
+                                                        {/if}
+                                                    </div>
                                                 </div>
                                                 <div class="text-xs text-gray-500 mt-1">
                                                     {group?.baseCurrency || "EUR"}
@@ -1227,17 +1321,32 @@
                                         {#each allMembers as member}
                                             <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
                                                 <div class="flex justify-between items-center">
-                                                    <div>
-                                                        <div class="font-semibold text-white">
-                                                            {getMemberName(member)}
-                                                        </div>
-                                                        {#if member.user}
-                                                            <div class="text-sm text-gray-400">
-                                                                {member.user.email}
-                                                            </div>
+                                                    <div class="flex items-center gap-3">
+                                                        {#if getMemberAvatar(member)}
+                                                            <img
+                                                                src={getMemberAvatar(member)}
+                                                                alt="Member avatar"
+                                                                class="h-11 w-11 rounded-2xl object-cover border border-dark-100"
+                                                            />
                                                         {:else}
-                                                            <div class="text-sm text-gray-400">Guest user</div>
+                                                            <div
+                                                                class="h-11 w-11 rounded-2xl bg-dark-200 text-primary flex items-center justify-center text-sm font-semibold"
+                                                            >
+                                                                {getMemberName(member).slice(0, 1).toUpperCase()}
+                                                            </div>
                                                         {/if}
+                                                        <div>
+                                                            <div class="font-semibold text-white">
+                                                                {getMemberName(member)}
+                                                            </div>
+                                                            {#if member.user}
+                                                                <div class="text-sm text-gray-400">
+                                                                    {member.user.email}
+                                                                </div>
+                                                            {:else}
+                                                                <div class="text-sm text-gray-400">Guest user</div>
+                                                            {/if}
+                                                        </div>
                                                     </div>
                                                     {#if member.userId !== null}
                                                         <div class="text-xs text-primary">Registered</div>
@@ -1261,11 +1370,19 @@
                             {#if group.createdBy === $user?.id}
                                 <div class="bg-dark-300 p-6 rounded-2xl border border-dark-100">
                                     <div class="flex flex-wrap gap-6 items-start">
-                                        <div
-                                            class="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary/80 to-primary-600 flex items-center justify-center text-4xl font-bold text-dark"
-                                        >
-                                            {group.name?.slice(0, 1) || "G"}
-                                        </div>
+                                        {#if group.imageUrl}
+                                            <img
+                                                src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
+                                                alt="Group image"
+                                                class="w-28 h-28 rounded-3xl object-cover border border-dark-100"
+                                            />
+                                        {:else}
+                                            <div
+                                                class="w-28 h-28 rounded-3xl bg-gradient-to-br from-primary/80 to-primary-600 flex items-center justify-center text-4xl font-bold text-dark"
+                                            >
+                                                {group.name?.slice(0, 1) || "G"}
+                                            </div>
+                                        {/if}
                                         <div class="flex-1 min-w-[220px]">
                                             <h3 class="text-2xl font-bold text-white mb-2">Group Settings</h3>
                                             <p class="text-sm text-gray-400">Manage your group details and members.</p>
@@ -1281,6 +1398,40 @@
                                     {/if}
 
                                     <form on:submit|preventDefault={saveGroupSettings} class="space-y-6 mt-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                                Group Image
+                                            </label>
+                                            <div class="flex flex-wrap items-center gap-4">
+                                                {#if group.imageUrl}
+                                                    <img
+                                                        src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
+                                                        alt="Group image"
+                                                        class="h-16 w-16 rounded-2xl object-cover border border-dark-100"
+                                                    />
+                                                {:else}
+                                                    <div
+                                                        class="h-16 w-16 rounded-2xl bg-dark-200 text-primary flex items-center justify-center font-semibold"
+                                                    >
+                                                        {group.name?.slice(0, 1) || "G"}
+                                                    </div>
+                                                {/if}
+                                                <label
+                                                    class="inline-flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200/70 px-4 py-2 text-sm text-gray-200 hover:bg-dark-100 cursor-pointer"
+                                                >
+                                                    {uploadingGroupImage ? "Uploading..." : "Upload image"}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        class="hidden"
+                                                        disabled={uploadingGroupImage}
+                                                        on:change={handleGroupImageChange}
+                                                    />
+                                                </label>
+                                                <div class="text-xs text-gray-500">JPG, PNG, GIF, or WebP. Max 8MB.</div>
+                                            </div>
+                                        </div>
+
                                         <div>
                                             <label
                                                 for="settingsGroupName"
@@ -1468,12 +1619,6 @@
                             class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
                         >
                             Export as spreadsheet
-                        </button>
-                        <button
-                            class="w-full rounded-lg border border-dark-100/70 px-3 py-2 text-sm text-gray-500"
-                            disabled
-                        >
-                            Manage reminders
                         </button>
                     </div>
                 </div>

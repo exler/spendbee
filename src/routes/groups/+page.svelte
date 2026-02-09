@@ -17,6 +17,7 @@
         archived?: boolean;
         userBalance?: number;
         baseCurrency?: string;
+        imageUrl?: string | null;
     }
 
     let groups: Group[] = [];
@@ -29,6 +30,13 @@
     let newGroupCurrency = "EUR";
     let error = "";
     let supportedCurrencies: string[] = [];
+
+    let avatarPreviewUrl: string | null = null;
+
+    $: {
+        const userAvatar = ($user as { avatarUrl?: string | null } | null)?.avatarUrl;
+        avatarPreviewUrl = userAvatar ? `/api/receipts/view/${encodeURIComponent(userAvatar)}` : null;
+    }
 
     onMount(() => {
         if (!$user) {
@@ -332,11 +340,19 @@
                                         : ''}"
                                 >
                                     <div class="flex items-start gap-4">
-                                        <div
-                                            class="h-12 w-12 rounded-2xl bg-primary text-dark flex items-center justify-center text-xl font-bold"
-                                        >
-                                            {group.name?.slice(0, 1) || "G"}
-                                        </div>
+                                        {#if group.imageUrl}
+                                            <img
+                                                src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
+                                                alt="Group image"
+                                                class="h-12 w-12 rounded-2xl object-cover border border-dark-100"
+                                            />
+                                        {:else}
+                                            <div
+                                                class="h-12 w-12 rounded-2xl bg-primary text-dark flex items-center justify-center text-xl font-bold"
+                                            >
+                                                {group.name?.slice(0, 1) || "G"}
+                                            </div>
+                                        {/if}
                                         <div class="flex-1">
                                             <div class="flex items-center gap-2">
                                                 <h3 class="text-xl font-semibold text-white">{group.name}</h3>
@@ -430,11 +446,19 @@
                 <div class="mt-6 bg-dark-300/50 p-5 rounded-2xl border border-dark-100/70">
                     <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Account</div>
                     <div class="mt-4 flex items-center gap-3">
-                        <div
-                            class="h-12 w-12 rounded-2xl bg-primary text-dark flex items-center justify-center text-lg font-bold"
-                        >
-                            {$user?.name?.slice(0, 1) || "U"}
-                        </div>
+                        {#if avatarPreviewUrl}
+                            <img
+                                src={avatarPreviewUrl}
+                                alt="Account avatar"
+                                class="h-12 w-12 rounded-2xl object-cover border border-dark-100"
+                            />
+                        {:else}
+                            <div
+                                class="h-12 w-12 rounded-2xl bg-primary text-dark flex items-center justify-center text-lg font-bold"
+                            >
+                                {$user?.name?.slice(0, 1) || "U"}
+                            </div>
+                        {/if}
                         <div>
                             <div class="text-lg font-semibold text-white">{$user?.name}</div>
                             <div class="text-sm text-gray-400">{$user?.email || "Signed in"}</div>

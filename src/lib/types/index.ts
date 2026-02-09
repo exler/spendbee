@@ -11,6 +11,7 @@ export interface Group {
     name: string;
     description: string | null;
     createdBy: number;
+    imageUrl?: string | null;
     createdAt: Date;
 }
 
@@ -41,6 +42,7 @@ export interface Balance {
     balanceByCurrency?: CurrencyBalance[];
     balanceInBaseCurrency?: number;
     isGuest?: boolean;
+    avatarUrl?: string | null;
 }
 
 export interface Settlement {
