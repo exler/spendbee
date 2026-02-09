@@ -89,6 +89,9 @@ export const api = {
                 method: "POST",
             }),
     },
+    activities: {
+        list: (limit?: number) => fetchAPI(`/activity${limit ? `?limit=${limit}` : ""}`),
+    },
     expenses: {
         create: (data: {
             groupId: number;

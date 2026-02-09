@@ -99,6 +99,35 @@ export const settlements = sqliteTable("settlements", {
         .$defaultFn(() => new Date()),
 });
 
+export const activities = sqliteTable(
+    "activities",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        groupId: integer("group_id")
+            .notNull()
+            .references(() => groups.id, { onDelete: "cascade" }),
+        actorMemberId: integer("actor_member_id")
+            .notNull()
+            .references(() => groupMembers.id, { onDelete: "cascade" }),
+        type: text("type").notNull(),
+        expenseId: integer("expense_id").references(() => expenses.id, { onDelete: "set null" }),
+        settlementId: integer("settlement_id").references(() => settlements.id, { onDelete: "set null" }),
+        fromMemberId: integer("from_member_id").references(() => groupMembers.id, { onDelete: "set null" }),
+        toMemberId: integer("to_member_id").references(() => groupMembers.id, { onDelete: "set null" }),
+        amount: real("amount"),
+        currency: text("currency"),
+        metadata: text("metadata"),
+        createdAt: integer("created_at", { mode: "timestamp" })
+            .notNull()
+            .$defaultFn(() => new Date()),
+    },
+    (table) => ({
+        groupIdx: index("activities_group_idx").on(table.groupId),
+        actorIdx: index("activities_actor_idx").on(table.actorMemberId),
+        createdIdx: index("activities_created_idx").on(table.createdAt),
+    }),
+);
+
 export const notifications = sqliteTable("notifications", {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id")
@@ -154,6 +183,7 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
     members: many(groupMembers),
     expenses: many(expenses),
     settlements: many(settlements),
+    activities: many(activities),
 }));
 
 export const groupMembersRelations = relations(groupMembers, ({ one, many }) => ({
@@ -166,6 +196,15 @@ export const groupMembersRelations = relations(groupMembers, ({ one, many }) => 
         references: [users.id],
     }),
     expenseShares: many(expenseShares),
+    activitiesAsActor: many(activities, {
+        relationName: "activity_actor",
+    }),
+    activitiesAsFrom: many(activities, {
+        relationName: "activity_from",
+    }),
+    activitiesAsTo: many(activities, {
+        relationName: "activity_to",
+    }),
 }));
 
 export const expensesRelations = relations(expenses, ({ one, many }) => ({
@@ -203,6 +242,36 @@ export const settlementsRelations = relations(settlements, ({ one }) => ({
     toMember: one(groupMembers, {
         fields: [settlements.toMemberId],
         references: [groupMembers.id],
+    }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+    group: one(groups, {
+        fields: [activities.groupId],
+        references: [groups.id],
+    }),
+    actorMember: one(groupMembers, {
+        fields: [activities.actorMemberId],
+        references: [groupMembers.id],
+        relationName: "activity_actor",
+    }),
+    fromMember: one(groupMembers, {
+        fields: [activities.fromMemberId],
+        references: [groupMembers.id],
+        relationName: "activity_from",
+    }),
+    toMember: one(groupMembers, {
+        fields: [activities.toMemberId],
+        references: [groupMembers.id],
+        relationName: "activity_to",
+    }),
+    expense: one(expenses, {
+        fields: [activities.expenseId],
+        references: [expenses.id],
+    }),
+    settlement: one(settlements, {
+        fields: [activities.settlementId],
+        references: [settlements.id],
     }),
 }));
 

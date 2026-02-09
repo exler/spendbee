@@ -1,50 +1,50 @@
 <script lang="ts">
-import { goto } from "$app/navigation";
-import { page } from "$app/stores";
-import { user } from "$lib/stores/auth";
-import { api } from "$lib/api";
-import { onMount } from "svelte";
+    import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
+    import { user } from "$lib/stores/auth";
+    import { api } from "$lib/api";
+    import { onMount } from "svelte";
 
-let email = "";
-let password = "";
-let name = "";
-let error = "";
-let loading = false;
-let token = "";
-let invitationRequired = false;
+    let email = "";
+    let password = "";
+    let name = "";
+    let error = "";
+    let loading = false;
+    let token = "";
+    let invitationRequired = false;
 
-onMount(() => {
-    // Get token from URL query parameter
-    token = $page.url.searchParams.get("token") || "";
-    // If no token, registration requires invitation
-    invitationRequired = !token;
-});
+    onMount(() => {
+        // Get token from URL query parameter
+        token = $page.url.searchParams.get("token") || "";
+        // If no token, registration requires invitation
+        invitationRequired = !token;
+    });
 
-async function handleRegister() {
-    error = "";
-    loading = true;
+    async function handleRegister() {
+        error = "";
+        loading = true;
 
-    try {
-        const response = await api.auth.register({ 
-            email, 
-            password, 
-            name,
-            token: token || undefined 
-        });
-        user.set(response.user);
-        
-        // If there's a group UUID, redirect to it, otherwise go to groups list
-        if (response.groupUuid) {
-            goto(`/groups/${response.groupUuid}`);
-        } else {
-            goto("/groups");
+        try {
+            const response = await api.auth.register({
+                email,
+                password,
+                name,
+                token: token || undefined,
+            });
+            user.set(response.user);
+
+            // If there's a group UUID, redirect to it, otherwise go to groups list
+            if (response.groupUuid) {
+                goto(`/groups/${response.groupUuid}`);
+            } else {
+                goto("/groups");
+            }
+        } catch (e) {
+            error = e instanceof Error ? e.message : "Registration failed";
+        } finally {
+            loading = false;
         }
-    } catch (e) {
-        error = e instanceof Error ? e.message : "Registration failed";
-    } finally {
-        loading = false;
     }
-}
 </script>
 
 <svelte:head>
@@ -55,7 +55,7 @@ async function handleRegister() {
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <a href="/" class="inline-block">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
+                <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
             </a>
             <h2 class="text-3xl font-semibold text-white mt-4">
                 {#if token}
@@ -68,12 +68,14 @@ async function handleRegister() {
         </div>
 
         {#if invitationRequired}
-            <div class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] text-center space-y-4 border border-dark-100">
+            <div
+                class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] text-center space-y-4 border border-dark-100"
+            >
                 <div class="bg-yellow-900/30 border border-yellow-500/50 text-yellow-200 p-4 rounded">
                     <p class="font-semibold mb-2">Registration is by invitation only</p>
                     <p class="text-sm">
-                        To create an account, you need to be invited to a group by an existing member.
-                        Ask someone with a Spendbee account to invite you.
+                        To create an account, you need to be invited to a group by an existing member. Ask someone with
+                        a Spendbee account to invite you.
                     </p>
                 </div>
 
@@ -83,7 +85,10 @@ async function handleRegister() {
                 </p>
             </div>
         {:else}
-            <form on:submit|preventDefault={handleRegister} class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100">
+            <form
+                on:submit|preventDefault={handleRegister}
+                class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100"
+            >
                 {#if error}
                     <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded">
                         {error}

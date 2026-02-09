@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
-import { expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
+import { activities, expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
 import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
@@ -39,6 +39,16 @@ export const DELETE = async (event: RequestEvent) => {
                 { status: 403 },
             );
         }
+
+        await db.insert(activities).values({
+            groupId: expense.groupId,
+            actorMemberId: membership.id,
+            type: "expense_deleted",
+            expenseId: expense.id,
+            amount: expense.amount,
+            currency: expense.currency,
+            metadata: JSON.stringify({ description: expense.description, note: expense.note || null }),
+        });
 
         // Delete the expense (shares will be cascade deleted)
         await db.delete(expenses).where(eq(expenses.id, expenseId));
@@ -182,6 +192,19 @@ export const PATCH = async (event: RequestEvent) => {
                 }
             }
         }
+
+        await db.insert(activities).values({
+            groupId: expense.groupId,
+            actorMemberId: membership.id,
+            type: "expense_updated",
+            expenseId: updatedExpense.id,
+            amount: updatedExpense.amount,
+            currency: updatedExpense.currency,
+            metadata: JSON.stringify({
+                description: updatedExpense.description,
+                note: updatedExpense.note || null,
+            }),
+        });
 
         return json(updatedExpense);
     } catch (error) {

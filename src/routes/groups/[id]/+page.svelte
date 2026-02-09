@@ -268,8 +268,6 @@
                 expenseCurrency = result.currency || "EUR";
                 receiptImageUrl = result.imageUrl;
 
-                console.log(result);
-
                 receiptItems = result.items.map((item: any) => ({
                     description: item.description,
                     quantity: item.quantity,
@@ -706,7 +704,7 @@
                 class="hidden lg:flex w-64 flex-col rounded-3xl border border-dark-100/70 bg-dark-400/40 backdrop-blur px-5 py-6 mt-6 mb-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
             >
                 <a href="/groups" class="inline-flex items-center gap-3">
-                    <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-10 h-10" />
+                    <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
                     <span class="text-xl font-semibold">Spendbee</span>
                 </a>
                 <div class="mt-8 space-y-1 text-sm">
@@ -771,7 +769,7 @@
                             Back to Groups
                         </a>
                         <a href="/groups" class="inline-flex items-center gap-2 hover:opacity-80 transition">
-                            <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-7 h-7" />
+                            <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-7 h-7" />
                             <span class="text-base font-semibold">Spendbee</span>
                         </a>
                     </div>
@@ -1238,7 +1236,7 @@
                                                                 {member.user.email}
                                                             </div>
                                                         {:else}
-                                                            <div class="text-sm text-gray-400">No account required</div>
+                                                            <div class="text-sm text-gray-400">Guest user</div>
                                                         {/if}
                                                     </div>
                                                     {#if member.userId !== null}

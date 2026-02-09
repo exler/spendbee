@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { groupMembers, settlements, groups } from "$lib/server/db/schema";
+import { activities, groupMembers, settlements, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
 import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
@@ -64,6 +64,17 @@ export const POST: RequestHandler = async (event) => {
                 exchangeRate,
             })
             .returning();
+
+        await db.insert(activities).values({
+            groupId,
+            actorMemberId: membership.id,
+            type: "settlement_created",
+            settlementId: settlement.id,
+            fromMemberId,
+            toMemberId,
+            amount,
+            currency: settlementCurrency,
+        });
 
         return json(settlement);
     } catch (error) {

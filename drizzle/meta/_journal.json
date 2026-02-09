@@ -43,6 +43,13 @@
             "when": 1770113879478,
             "tag": "0005_exchange_rates",
             "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "6",
+            "when": 1770664564972,
+            "tag": "0006_activities",
+            "breakpoints": true
         }
     ]
 }

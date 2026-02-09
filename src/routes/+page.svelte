@@ -18,7 +18,7 @@
     <div class="max-w-4xl w-full grid gap-8 lg:grid-cols-[1.1fr_0.9fr] items-center">
         <div class="space-y-6">
             <div class="flex items-center gap-4">
-                <img src="/logo-1024x1024.png" alt="Spendbee Logo" class="w-24 h-24" />
+                <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-24 h-24" />
                 <div>
                     <h1 class="text-4xl font-bold text-white">Spendbee</h1>
                     <p class="text-gray-400">Split bills and track expenses with friends</p>

@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
+import { activities, expenseShares, expenses, groupMembers, groups } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { requireAuth, checkGroupArchived } from "$lib/server/utils";
 import { getExchangeRate, getExchangeRates } from "$lib/server/services/currency";
@@ -99,6 +99,17 @@ export const POST: RequestHandler = async (event) => {
                 createdAt: createdAt ? new Date(createdAt) : new Date(),
             })
             .returning();
+
+        await db.insert(activities).values({
+            groupId,
+            actorMemberId: membership.id,
+            type: "expense_created",
+            expenseId: expense.id,
+            amount,
+            currency: expenseCurrency,
+            metadata: JSON.stringify({ description, note: note || null }),
+            createdAt: createdAt ? new Date(createdAt) : new Date(),
+        });
 
         // Handle shares
         if (customShares && customShares.length > 0) {
