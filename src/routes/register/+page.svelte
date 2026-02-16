@@ -4,6 +4,7 @@
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import { onMount } from "svelte";
+    import { inviteOnly } from "$lib/settings";
 
     let email = "";
     let password = "";
@@ -17,7 +18,7 @@
         // Get token from URL query parameter
         token = $page.url.searchParams.get("token") || "";
         // If no token, registration requires invitation
-        invitationRequired = !token;
+        invitationRequired = inviteOnly && !token;
     });
 
     async function handleRegister() {
@@ -60,8 +61,10 @@
             <h2 class="text-3xl font-semibold text-white mt-4">
                 {#if token}
                     Complete Your Invitation
-                {:else}
+                {:else if inviteOnly}
                     Invitation Required
+                {:else}
+                    Create Your Account
                 {/if}
             </h2>
             <p class="text-sm text-gray-400 mt-2">Join your group to start splitting expenses.</p>
@@ -144,7 +147,13 @@
                     disabled={loading}
                     class="w-full bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? "Creating account..." : "Create Account & Join Group"}
+                    {#if loading}
+                        Creating account...
+                    {:else if token}
+                        Create Account & Join Group
+                    {:else}
+                        Create Account
+                    {/if}
                 </button>
 
                 <p class="text-center text-gray-400">

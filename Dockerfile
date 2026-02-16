@@ -53,6 +53,8 @@ EXPOSE 3000
 # Set environment variables
 ENV PORT=3000
 ENV DATABASE_URL=/app/data/spendbee.db
+# SvelteKit adapter-bun default is 512K; allow larger uploads (base64 inflates size).
+ENV BODY_SIZE_LIMIT=20M
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \

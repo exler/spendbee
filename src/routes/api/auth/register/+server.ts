@@ -5,12 +5,12 @@ import { db } from "$lib/server/db";
 import { users, groupMembers, invitationTokens } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { signJWT } from "$lib/server/auth";
+import { inviteOnly } from "$lib/settings";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
     try {
         const body = await request.json();
         const { email, password, name, token } = body;
-
         // Validation
         if (!email || !password || !name) {
             return json({ error: "Missing required fields" }, { status: 400 });
@@ -21,33 +21,41 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         }
 
         // Check if invitation token is required (no token = require invitation)
-        if (!token) {
+        if (!token && inviteOnly) {
             return json(
                 { error: "Registration requires an invitation. Please ask a group member to invite you." },
                 { status: 403 },
             );
         }
 
-        // Validate invitation token
-        const invitation = await db.query.invitationTokens.findFirst({
-            where: and(eq(invitationTokens.token, token), eq(invitationTokens.used, false)),
-            with: {
-                group: true,
-            },
-        });
+        let invitation: typeof invitationTokens.$inferSelect | null = null;
+        let invitationGroup: { uuid: string } | null = null;
 
-        if (!invitation) {
-            return json({ error: "Invalid or expired invitation token" }, { status: 400 });
-        }
+        if (token) {
+            // Validate invitation token
+            const invitationWithGroup = await db.query.invitationTokens.findFirst({
+                where: and(eq(invitationTokens.token, token), eq(invitationTokens.used, false)),
+                with: {
+                    group: true,
+                },
+            });
 
-        // Check if token has expired
-        if (invitation.expiresAt < new Date()) {
-            return json({ error: "This invitation has expired. Please request a new one." }, { status: 400 });
-        }
+            if (!invitationWithGroup) {
+                return json({ error: "Invalid or expired invitation token" }, { status: 400 });
+            }
 
-        // Check if email matches invitation
-        if (invitation.email.toLowerCase() !== email.toLowerCase()) {
-            return json({ error: "Email does not match the invitation" }, { status: 400 });
+            // Check if token has expired
+            if (invitationWithGroup.expiresAt < new Date()) {
+                return json({ error: "This invitation has expired. Please request a new one." }, { status: 400 });
+            }
+
+            // Check if email matches invitation
+            if (invitationWithGroup.email.toLowerCase() !== email.toLowerCase()) {
+                return json({ error: "Email does not match the invitation" }, { status: 400 });
+            }
+
+            invitation = invitationWithGroup;
+            invitationGroup = invitationWithGroup.group;
         }
 
         // Check if user already exists
@@ -72,14 +80,20 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
             })
             .returning();
 
-        // Add user to the group automatically
-        await db.insert(groupMembers).values({
-            groupId: invitation.groupId,
-            userId: user.id,
-        });
+        let groupUuid: string | null = null;
 
-        // Mark invitation token as used
-        await db.update(invitationTokens).set({ used: true }).where(eq(invitationTokens.id, invitation.id));
+        if (invitation) {
+            // Add user to the group automatically
+            await db.insert(groupMembers).values({
+                groupId: invitation.groupId,
+                userId: user.id,
+            });
+
+            // Mark invitation token as used
+            await db.update(invitationTokens).set({ used: true }).where(eq(invitationTokens.id, invitation.id));
+
+            groupUuid = invitationGroup?.uuid ?? null;
+        }
 
         // Generate JWT
         const jwtToken = await signJWT({
@@ -103,7 +117,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
                 name: user.name,
                 createdAt: user.createdAt,
             },
-            groupUuid: invitation.group.uuid,
+            groupUuid,
         });
     } catch (error) {
         console.error(error);

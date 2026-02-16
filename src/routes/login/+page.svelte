@@ -3,6 +3,7 @@
     import { page } from "$app/stores";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
+    import { inviteOnly } from "$lib/settings";
 
     let email = "";
     let password = "";
@@ -88,9 +89,11 @@
                 {loading ? "Logging in..." : "Login"}
             </button>
 
-            <div class="rounded-xl bg-dark-200/70 p-3 text-sm text-gray-400">
-                Invitation-only access. Ask an existing member to invite you.
-            </div>
+            {#if inviteOnly}
+                <div class="rounded-xl bg-dark-200/70 p-3 text-sm text-gray-400">
+                    Invitation-only access. Ask an existing member to invite you.
+                </div>
+            {/if}
         </form>
     </div>
 </div>

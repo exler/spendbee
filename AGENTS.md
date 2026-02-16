@@ -122,6 +122,10 @@ bun run db:generate  # Generate migrations
 bun run db:migrate   # Run migrations
 ```
 
+## Environment
+
+* `PUBLIC_IS_INVITE_ONLY`: Set to `true` to require invites. Set to `false` to allow open registration. Defaults to `true`.
+
 ## Guidelines
 
 * Update the AGENTS.md whenever it feels appropriate.
