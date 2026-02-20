@@ -96,7 +96,12 @@
     let settlements: Settlement[] = [];
     let loading = true;
     let error = "";
-    let activeTab: "expenses" | "balances" | "settlements" | "members" | "settings" = "expenses";
+    let activeTab:
+        | "expenses"
+        | "balances"
+        | "settlements"
+        | "members"
+        | "settings" = "expenses";
 
     let showAddExpense = false;
     let showSettleDebt = false;
@@ -143,7 +148,8 @@
     let showReceiptPreview: number | null = null;
 
     // Attachment variables
-    let expenseAttachments: Array<{ url: string; name: string; type: string }> = [];
+    let expenseAttachments: Array<{ url: string; name: string; type: string }> =
+        [];
     let uploadingAttachment = false;
     let previewImageUrl: string | null = null;
 
@@ -163,16 +169,23 @@
     async function loadGroupData() {
         loading = true;
         try {
-            [group, allMembers, pendingInvitations, expenses, balances, settlements, supportedCurrencies] =
-                await Promise.all([
-                    api.groups.get(groupUuid),
-                    api.members.list(groupUuid),
-                    api.groups.invitations(groupUuid),
-                    api.expenses.list(groupUuid),
-                    api.expenses.balances(groupUuid),
-                    api.expenses.settlements(groupUuid),
-                    api.groups.currencies().then((res) => res.currencies),
-                ]);
+            [
+                group,
+                allMembers,
+                pendingInvitations,
+                expenses,
+                balances,
+                settlements,
+                supportedCurrencies,
+            ] = await Promise.all([
+                api.groups.get(groupUuid),
+                api.members.list(groupUuid),
+                api.groups.invitations(groupUuid),
+                api.expenses.list(groupUuid),
+                api.expenses.balances(groupUuid),
+                api.expenses.settlements(groupUuid),
+                api.groups.currencies().then((res) => res.currencies),
+            ]);
             if (group) {
                 groupId = group.id; // Set the internal numeric ID
                 expenseCurrency = group.baseCurrency || "EUR";
@@ -183,19 +196,27 @@
                 editGroupCurrency = group.baseCurrency || "EUR";
             }
             // Set default paidBy to current user's member ID
-            const currentUserMember = allMembers.find((m) => m.userId === $user?.id);
+            const currentUserMember = allMembers.find(
+                (m) => m.userId === $user?.id,
+            );
             if (currentUserMember && expensePaidBy === 0) {
                 expensePaidBy = currentUserMember.id;
             }
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to load group data";
+            error =
+                e instanceof Error ? e.message : "Failed to load group data";
         } finally {
             loading = false;
         }
     }
 
     async function addExpense() {
-        if (!expenseDescription || !expenseAmount || selectedMembers.length === 0) return;
+        if (
+            !expenseDescription ||
+            !expenseAmount ||
+            selectedMembers.length === 0
+        )
+            return;
 
         if (splitMode === "percent" && Math.abs(getPercentRemaining()) > 0.01) {
             error = "Percentages must add up to 100%";
@@ -216,8 +237,12 @@
                 paidBy: expensePaidBy || undefined,
                 sharedWith: selectedMembers,
                 receiptImageUrl: receiptImageUrl || undefined,
-                receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
-                attachments: expenseAttachments.length > 0 ? expenseAttachments : undefined,
+                receiptItems:
+                    receiptItems.length > 0 ? receiptItems : undefined,
+                attachments:
+                    expenseAttachments.length > 0
+                        ? expenseAttachments
+                        : undefined,
                 customShares: customSharesArray,
             });
             resetExpenseForm();
@@ -283,7 +308,12 @@
                     assignedTo: [],
                 }));
 
-                const total = result.total || receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                const total =
+                    result.total ||
+                    receiptItems.reduce(
+                        (sum, item) => sum + item.price * item.quantity,
+                        0,
+                    );
                 expenseAmount = total.toFixed(2);
 
                 // Add uploaded attachments if any
@@ -295,7 +325,8 @@
                 showAddExpense = true;
             } catch (e) {
                 console.error(e);
-                error = e instanceof Error ? e.message : "Failed to scan receipt";
+                error =
+                    e instanceof Error ? e.message : "Failed to scan receipt";
             } finally {
                 scanningReceipt = false;
             }
@@ -321,7 +352,11 @@
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ];
 
-        for (let i = 0; i < files.length && expenseAttachments.length < 5; i++) {
+        for (
+            let i = 0;
+            i < files.length && expenseAttachments.length < 5;
+            i++
+        ) {
             const file = files[i];
 
             if (!allowedTypes.includes(file.type)) {
@@ -350,7 +385,10 @@
 
                         expenseAttachments = [...expenseAttachments, result];
                     } catch (e) {
-                        error = e instanceof Error ? e.message : "Failed to upload attachment";
+                        error =
+                            e instanceof Error
+                                ? e.message
+                                : "Failed to upload attachment";
                     } finally {
                         uploadingAttachment = false;
                     }
@@ -367,12 +405,19 @@
         expenseAttachments = expenseAttachments.filter((_, i) => i !== index);
     }
 
-    function handleImagePreview(attachment: { url: string; name: string; type: string }) {
+    function handleImagePreview(attachment: {
+        url: string;
+        name: string;
+        type: string;
+    }) {
         previewImageUrl = attachment.url;
     }
 
     function addReceiptItem() {
-        receiptItems = [...receiptItems, { description: "", quantity: 1, price: 0, assignedTo: [] }];
+        receiptItems = [
+            ...receiptItems,
+            { description: "", quantity: 1, price: 0, assignedTo: [] },
+        ];
     }
 
     function deleteReceiptItem(index: number) {
@@ -381,7 +426,10 @@
     }
 
     function updateTotalFromItems() {
-        const total = receiptItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const total = receiptItems.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0,
+        );
         expenseAmount = total.toFixed(2);
     }
 
@@ -406,7 +454,8 @@
                 const sharePerPerson = itemTotal / item.assignedTo.length;
 
                 for (const memberId of item.assignedTo) {
-                    memberShares[memberId] = (memberShares[memberId] || 0) + sharePerPerson;
+                    memberShares[memberId] =
+                        (memberShares[memberId] || 0) + sharePerPerson;
                 }
             }
         }
@@ -433,7 +482,8 @@
             showAddGuestMember = false;
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to add guest member";
+            error =
+                e instanceof Error ? e.message : "Failed to add guest member";
         }
     }
 
@@ -452,29 +502,40 @@
                 if (error === "Invitation sent successfully!") error = "";
             }, 3000);
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to send invitation";
+            error =
+                e instanceof Error ? e.message : "Failed to send invitation";
         }
     }
 
     async function deleteGuestMember(memberId: number) {
-        if (!confirm("Are you sure? This will remove all their expense shares and settlements.")) return;
+        if (
+            !confirm(
+                "Are you sure? This will remove all their expense shares and settlements.",
+            )
+        )
+            return;
 
         try {
             await api.members.delete(groupUuid, memberId);
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to delete guest member";
+            error =
+                e instanceof Error
+                    ? e.message
+                    : "Failed to delete guest member";
         }
     }
 
     async function revokeInvitation(invitationId: number, type: string) {
-        if (!confirm("Are you sure you want to revoke this invitation?")) return;
+        if (!confirm("Are you sure you want to revoke this invitation?"))
+            return;
 
         try {
             await api.groups.revokeInvitation(groupUuid, invitationId, type);
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to revoke invitation";
+            error =
+                e instanceof Error ? e.message : "Failed to revoke invitation";
         }
     }
 
@@ -486,7 +547,10 @@
             showChangeCurrency = false;
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to update base currency";
+            error =
+                e instanceof Error
+                    ? e.message
+                    : "Failed to update base currency";
         }
     }
 
@@ -508,7 +572,10 @@
             }, 3000);
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to update group settings";
+            error =
+                e instanceof Error
+                    ? e.message
+                    : "Failed to update group settings";
         }
     }
 
@@ -522,10 +589,15 @@
         try {
             const file = input.files[0];
             const base64 = await readAsDataUrl(file);
-            const updated = await uploadGroupImage(group.uuid, base64, file.name);
+            const updated = await uploadGroupImage(
+                group.uuid,
+                base64,
+                file.name,
+            );
             group = { ...group, imageUrl: updated.imageUrl };
         } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to upload group image";
+            error =
+                e instanceof Error ? e.message : "Failed to upload group image";
         } finally {
             uploadingGroupImage = false;
             input.value = "";
@@ -550,7 +622,8 @@
             await api.groups.archive(groupUuid, newArchivedState);
             loadGroupData();
         } catch (e) {
-            error = e instanceof Error ? e.message : `Failed to ${action} group`;
+            error =
+                e instanceof Error ? e.message : `Failed to ${action} group`;
         }
     }
 
@@ -627,14 +700,25 @@
             const total = Number.parseFloat(expenseAmount || "0");
             percentShares = {};
 
-            if (selectedMembers.length > 0 && total > 0 && Object.keys(customShares).length > 0) {
+            if (
+                selectedMembers.length > 0 &&
+                total > 0 &&
+                Object.keys(customShares).length > 0
+            ) {
                 selectedMembers.forEach((memberId) => {
-                    const amount = Number.parseFloat(customShares[memberId] || "0");
-                    percentShares[memberId] = ((amount / total) * 100).toFixed(2);
+                    const amount = Number.parseFloat(
+                        customShares[memberId] || "0",
+                    );
+                    percentShares[memberId] = ((amount / total) * 100).toFixed(
+                        2,
+                    );
                 });
             }
 
-            if (Object.keys(percentShares).length === 0 && selectedMembers.length > 0) {
+            if (
+                Object.keys(percentShares).length === 0 &&
+                selectedMembers.length > 0
+            ) {
                 distributePercentEvenly();
             }
         }
@@ -643,7 +727,9 @@
     function buildCustomSharesArray(totalAmount: number) {
         if (splitMode === "percent") {
             const shares = selectedMembers.map((memberId) => {
-                const percent = Number.parseFloat(percentShares[memberId] || "0");
+                const percent = Number.parseFloat(
+                    percentShares[memberId] || "0",
+                );
                 const amount = (totalAmount * percent) / 100;
                 return {
                     memberId,
@@ -652,8 +738,13 @@
             });
 
             if (shares.length > 0) {
-                const allocated = shares.reduce((sum, share) => sum + share.amount, 0);
-                const diff = Number.parseFloat((totalAmount - allocated).toFixed(2));
+                const allocated = shares.reduce(
+                    (sum, share) => sum + share.amount,
+                    0,
+                );
+                const diff = Number.parseFloat(
+                    (totalAmount - allocated).toFixed(2),
+                );
                 shares[shares.length - 1].amount = Number.parseFloat(
                     (shares[shares.length - 1].amount + diff).toFixed(2),
                 );
@@ -712,7 +803,9 @@
 
         // Check if shares are even
         const shareAmount = expense.amount / expense.shares.length;
-        const allSharesEqual = expense.shares.every((s) => Math.abs(s.share - shareAmount) < 0.01);
+        const allSharesEqual = expense.shares.every(
+            (s) => Math.abs(s.share - shareAmount) < 0.01,
+        );
 
         if (allSharesEqual) {
             splitEvenly = true;
@@ -759,7 +852,11 @@
         });
     }
 
-    async function uploadGroupImage(groupUuid: string, file: string, filename: string) {
+    async function uploadGroupImage(
+        groupUuid: string,
+        file: string,
+        filename: string,
+    ) {
         const response = await fetch(`/api/groups/${groupUuid}/image`, {
             method: "POST",
             credentials: "include",
@@ -778,7 +875,13 @@
     }
 
     async function updateExpense() {
-        if (!expenseDescription || !expenseAmount || selectedMembers.length === 0 || !editingExpenseId) return;
+        if (
+            !expenseDescription ||
+            !expenseAmount ||
+            selectedMembers.length === 0 ||
+            !editingExpenseId
+        )
+            return;
 
         if (splitMode === "percent" && Math.abs(getPercentRemaining()) > 0.01) {
             error = "Percentages must add up to 100%";
@@ -798,8 +901,12 @@
                 paidBy: expensePaidBy || undefined,
                 sharedWith: selectedMembers,
                 receiptImageUrl: receiptImageUrl || undefined,
-                receiptItems: receiptItems.length > 0 ? receiptItems : undefined,
-                attachments: expenseAttachments.length > 0 ? expenseAttachments : undefined,
+                receiptItems:
+                    receiptItems.length > 0 ? receiptItems : undefined,
+                attachments:
+                    expenseAttachments.length > 0
+                        ? expenseAttachments
+                        : undefined,
                 customShares: customSharesArray,
             });
 
@@ -829,7 +936,9 @@
         expenseAmount = "";
         expenseDate = "";
         // Set default paidBy to current user's member ID
-        const currentUserMember = allMembers.find((m) => m.userId === $user?.id);
+        const currentUserMember = allMembers.find(
+            (m) => m.userId === $user?.id,
+        );
         expensePaidBy = currentUserMember?.id || 0;
         selectedMembers = [];
         splitEvenly = true;
@@ -840,6 +949,76 @@
         receiptImageUrl = null;
         receiptItems = [];
         expenseAttachments = [];
+    }
+
+    // Settle debt helpers
+
+    /**
+     * Returns how much `fromId` owes `toId` in the group's base currency.
+     * Positive = fromId owes toId. Negative = toId owes fromId.
+     */
+    function getPairwiseBalance(fromId: number, toId: number): number {
+        let balance = 0;
+        for (const expense of expenses) {
+            const rate = expense.exchangeRate ?? 1;
+            if (expense.paidBy === toId) {
+                const share = expense.shares.find(
+                    (s) => s.member.id === fromId,
+                );
+                if (share) balance += share.share * rate;
+            } else if (expense.paidBy === fromId) {
+                const share = expense.shares.find((s) => s.member.id === toId);
+                if (share) balance -= share.share * rate;
+            }
+        }
+        for (const settlement of settlements) {
+            const rate = settlement.exchangeRate ?? 1;
+            if (
+                settlement.fromMember.id === fromId &&
+                settlement.toMember.id === toId
+            ) {
+                balance -= settlement.amount * rate;
+            } else if (
+                settlement.fromMember.id === toId &&
+                settlement.toMember.id === fromId
+            ) {
+                balance += settlement.amount * rate;
+            }
+        }
+        return balance;
+    }
+
+    $: sortedMembersForSettle = [...allMembers].sort((a, b) => {
+        const balA = balances.find((x) => x.memberId === a.id)?.balance ?? 0;
+        const balB = balances.find((x) => x.memberId === b.id)?.balance ?? 0;
+        return balA - balB; // most negative (owes most) first
+    });
+
+    $: sortedReceiversForSettle = [...allMembers]
+        .filter((m) => m.id !== settleFromMember)
+        .sort((a, b) => {
+            if (settleFromMember) {
+                // sort by how much the payer owes them (most owed first)
+                return (
+                    getPairwiseBalance(settleFromMember, b.id) -
+                    getPairwiseBalance(settleFromMember, a.id)
+                );
+            }
+            const balA =
+                balances.find((x) => x.memberId === a.id)?.balance ?? 0;
+            const balB =
+                balances.find((x) => x.memberId === b.id)?.balance ?? 0;
+            return balB - balA;
+        });
+
+    function selectSettleFrom(memberId: number) {
+        settleFromMember = memberId;
+        if (settleToMember === memberId) settleToMember = 0;
+        settleAmount = "";
+    }
+
+    function selectSettleTo(memberId: number) {
+        settleToMember = memberId;
     }
 </script>
 
@@ -853,8 +1032,14 @@
             <LeftSidebar active="groups">
                 {#if group}
                     <div>
-                        <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Current group</div>
-                        <div class="mt-3 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
+                        <div
+                            class="text-xs uppercase tracking-[0.2em] text-gray-500"
+                        >
+                            Current group
+                        </div>
+                        <div
+                            class="mt-3 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4"
+                        >
                             <div class="flex items-center gap-3">
                                 {#if group.imageUrl}
                                     <img
@@ -870,8 +1055,12 @@
                                     </div>
                                 {/if}
                                 <div>
-                                    <div class="font-semibold text-white">{group.name}</div>
-                                    <div class="text-xs text-gray-400">{allMembers.length} members</div>
+                                    <div class="font-semibold text-white">
+                                        {group.name}
+                                    </div>
+                                    <div class="text-xs text-gray-400">
+                                        {allMembers.length} members
+                                    </div>
                                 </div>
                             </div>
                             <button
@@ -888,9 +1077,19 @@
             <main class="flex-1">
                 <MobileNavbar backHref="/groups" backLabel="Back to groups" />
                 <div class="pt-6">
-                    <div class="hidden lg:flex items-center justify-between mb-6">
-                        <a href="/groups" class="text-gray-400 hover:text-white flex items-center gap-2 text-sm">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div
+                        class="hidden lg:flex items-center justify-between mb-6"
+                    >
+                        <a
+                            href="/groups"
+                            class="text-gray-400 hover:text-white flex items-center gap-2 text-sm"
+                        >
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
@@ -910,7 +1109,9 @@
                         <div
                             class="relative mb-6 rounded-3xl border border-dark-100/70 bg-dark-300/55 p-6 shadow-[0_0_30px_rgba(0,0,0,0.25)]"
                         >
-                            <div class="flex flex-wrap items-start justify-between gap-6">
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-6"
+                            >
                                 <div class="flex flex-col gap-4">
                                     <div class="flex items-center gap-4">
                                         {#if group.imageUrl}
@@ -927,8 +1128,14 @@
                                             </div>
                                         {/if}
                                         <div>
-                                            <div class="flex items-center gap-2">
-                                                <h1 class="text-3xl font-bold text-white">{group.name}</h1>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <h1
+                                                    class="text-3xl font-bold text-white"
+                                                >
+                                                    {group.name}
+                                                </h1>
                                                 {#if group.archived}
                                                     <span
                                                         class="bg-dark-100 text-gray-300 px-3 py-1 rounded-full text-xs uppercase tracking-[0.2em]"
@@ -938,9 +1145,13 @@
                                                 {/if}
                                             </div>
                                             {#if group.description}
-                                                <p class="text-gray-400 mt-1">{group.description}</p>
+                                                <p class="text-gray-400 mt-1">
+                                                    {group.description}
+                                                </p>
                                             {/if}
-                                            <div class="mt-2 text-sm text-gray-500">
+                                            <div
+                                                class="mt-2 text-sm text-gray-500"
+                                            >
                                                 {allMembers.length} members ({allMembers.filter(
                                                     (m) => m.userId === null,
                                                 ).length} guests)
@@ -950,14 +1161,16 @@
                                     {#if activeTab === "expenses"}
                                         <div class="flex flex-wrap gap-2">
                                             <button
-                                                on:click={() => (showAddExpense = true)}
+                                                on:click={() =>
+                                                    (showAddExpense = true)}
                                                 disabled={group.archived}
                                                 class="rounded-xl bg-primary text-dark px-5 py-2.5 text-sm font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 Add expense
                                             </button>
                                             <button
-                                                on:click={() => (showScanReceipt = true)}
+                                                on:click={() =>
+                                                    (showScanReceipt = true)}
                                                 disabled={group.archived}
                                                 class="rounded-xl border border-dark-100 bg-dark-200/80 px-5 py-2.5 text-sm font-semibold text-white hover:bg-dark-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
@@ -986,7 +1199,8 @@
                                     {:else if activeTab === "balances" || activeTab === "settlements"}
                                         <div class="flex flex-wrap gap-2">
                                             <button
-                                                on:click={() => (showSettleDebt = true)}
+                                                on:click={() =>
+                                                    (showSettleDebt = true)}
                                                 disabled={group.archived}
                                                 class="rounded-xl bg-primary text-dark px-5 py-2.5 text-sm font-semibold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
@@ -996,10 +1210,13 @@
                                     {/if}
                                 </div>
                             </div>
-                            <div class="absolute right-4 top-4 flex flex-col gap-2">
+                            <div
+                                class="absolute right-4 top-4 flex flex-col gap-2"
+                            >
                                 {#if group.createdBy === $user?.id}
                                     <button
-                                        on:click={() => (activeTab = "settings")}
+                                        on:click={() =>
+                                            (activeTab = "settings")}
                                         class="h-10 w-10 rounded-full border border-dark-100 bg-dark-200/80 text-gray-200 hover:bg-dark-100 hover:text-white transition"
                                         title="Settings"
                                         aria-label="Group settings"
@@ -1025,7 +1242,10 @@
                                     title="Members"
                                     aria-label="Group members"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" viewBox="0 0 24 24"
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="w-5 h-5 mx-auto"
+                                        viewBox="0 0 24 24"
                                         >><path
                                             fill="currentColor"
                                             d="M16.5 13c-1.2 0-3.07.34-4.5 1c-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25m-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22c.88-.3 1.96-.53 3.02-.53c2.44 0 5 1.21 5 1.75zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5S4 6.57 4 8.5S5.57 12 7.5 12m0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2s-2-.9-2-2s.9-2 2-2m9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5S13 6.57 13 8.5s1.57 3.5 3.5 3.5m0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2s-2-.9-2-2s.9-2 2-2"
@@ -1037,14 +1257,17 @@
                                 <div
                                     class="mt-4 bg-yellow-900/30 border border-yellow-700 text-yellow-200 p-3 rounded-lg text-sm"
                                 >
-                                    This group is archived. You cannot add expenses or settle debts until it is
+                                    This group is archived. You cannot add
+                                    expenses or settle debts until it is
                                     unarchived.
                                 </div>
                             {/if}
                         </div>
 
                         {#if error}
-                            <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4">
+                            <div
+                                class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mb-4"
+                            >
                                 {error}
                             </div>
                         {/if}
@@ -1052,7 +1275,8 @@
                         <div class="flex flex-wrap gap-2 mb-6">
                             <button
                                 on:click={() => (activeTab = "expenses")}
-                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab === 'expenses'
+                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab ===
+                                'expenses'
                                     ? 'bg-primary text-dark'
                                     : 'bg-dark-200 text-gray-300 hover:text-white'}"
                             >
@@ -1060,7 +1284,8 @@
                             </button>
                             <button
                                 on:click={() => (activeTab = "balances")}
-                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab === 'balances'
+                                class="px-5 py-2 rounded-full text-sm font-medium transition {activeTab ===
+                                'balances'
                                     ? 'bg-primary text-dark'
                                     : 'bg-dark-200 text-gray-300 hover:text-white'}"
                             >
@@ -1079,8 +1304,12 @@
 
                         {#if activeTab === "expenses"}
                             {#if expenses.length === 0}
-                                <div class="text-center py-16 bg-dark-300 rounded-2xl border border-dark-100">
-                                    <p class="text-gray-400">No expenses yet.</p>
+                                <div
+                                    class="text-center py-16 bg-dark-300 rounded-2xl border border-dark-100"
+                                >
+                                    <p class="text-gray-400">
+                                        No expenses yet.
+                                    </p>
                                 </div>
                             {:else}
                                 <div class="space-y-3">
@@ -1088,9 +1317,13 @@
                                         <div
                                             class="bg-dark-300 p-5 rounded-2xl border border-dark-100 hover:border-primary/50 transition"
                                         >
-                                            <div class="flex flex-wrap justify-between items-start gap-4 mb-3">
+                                            <div
+                                                class="flex flex-wrap justify-between items-start gap-4 mb-3"
+                                            >
                                                 <div class="flex-1">
-                                                    <div class="flex items-center gap-3">
+                                                    <div
+                                                        class="flex items-center gap-3"
+                                                    >
                                                         <div
                                                             class="h-10 w-10 rounded-xl bg-dark-200 flex items-center justify-center text-primary border border-dark-100"
                                                         >
@@ -1107,46 +1340,85 @@
                                                             >
                                                         </div>
                                                         <div>
-                                                            <h3 class="text-xl font-bold text-white">
+                                                            <h3
+                                                                class="text-xl font-bold text-white"
+                                                            >
                                                                 {expense.description}
                                                             </h3>
-                                                            <p class="text-sm text-gray-400">
-                                                                Paid by {getMemberName(expense.payer)}
+                                                            <p
+                                                                class="text-sm text-gray-400"
+                                                            >
+                                                                Paid by {getMemberName(
+                                                                    expense.payer,
+                                                                )}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     {#if expense.note}
-                                                        <p class="text-sm text-gray-400 mt-2">{expense.note}</p>
+                                                        <p
+                                                            class="text-sm text-gray-400 mt-2"
+                                                        >
+                                                            {expense.note}
+                                                        </p>
                                                     {/if}
-                                                    <div class="text-sm text-gray-500 mt-2">
+                                                    <div
+                                                        class="text-sm text-gray-500 mt-2"
+                                                    >
                                                         Split with: {expense.shares
-                                                            .map((s) => getMemberName(s.member))
+                                                            .map((s) =>
+                                                                getMemberName(
+                                                                    s.member,
+                                                                ),
+                                                            )
                                                             .join(", ")}
                                                     </div>
                                                 </div>
                                                 <div class="text-right">
-                                                    <div class="text-2xl font-bold text-primary">
-                                                        {formatCurrency(expense.amount)}
-                                                        {expense.currency || "EUR"}
+                                                    <div
+                                                        class="text-2xl font-bold text-primary"
+                                                    >
+                                                        {formatCurrency(
+                                                            expense.amount,
+                                                        )}
+                                                        {expense.currency ||
+                                                            "EUR"}
                                                     </div>
                                                     {#if expense.currency && expense.currency !== group?.baseCurrency && expense.exchangeRate}
-                                                        <div class="text-xs text-gray-500 mt-1">
-                                                            @ {expense.exchangeRate.toFixed(4)}
-                                                            {group?.baseCurrency || "EUR"}/{expense.currency}
+                                                        <div
+                                                            class="text-xs text-gray-500 mt-1"
+                                                        >
+                                                            @ {expense.exchangeRate.toFixed(
+                                                                4,
+                                                            )}
+                                                            {group?.baseCurrency ||
+                                                                "EUR"}/{expense.currency}
                                                         </div>
                                                     {/if}
-                                                    <div class="text-xs text-gray-500 mt-1">
-                                                        {formatDate(expense.createdAt)}
+                                                    <div
+                                                        class="text-xs text-gray-500 mt-1"
+                                                    >
+                                                        {formatDate(
+                                                            expense.createdAt,
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div class="flex flex-wrap justify-between items-end gap-4">
+                                            <div
+                                                class="flex flex-wrap justify-between items-end gap-4"
+                                            >
                                                 {#if expense.attachments || expense.receiptImageUrl}
                                                     <div class="flex-1">
-                                                        <div class="text-xs text-gray-500 mb-2">Attachments</div>
+                                                        <div
+                                                            class="text-xs text-gray-500 mb-2"
+                                                        >
+                                                            Attachments
+                                                        </div>
                                                         {#if expense.attachments}
-                                                            {@const parsedAttachments = JSON.parse(expense.attachments)}
+                                                            {@const parsedAttachments =
+                                                                JSON.parse(
+                                                                    expense.attachments,
+                                                                )}
                                                             <AttachmentPreview
                                                                 attachments={parsedAttachments}
                                                                 onImageClick={handleImagePreview}
@@ -1169,7 +1441,10 @@
                                                 {/if}
                                                 <div class="flex gap-2">
                                                     <button
-                                                        on:click={() => startEditExpense(expense)}
+                                                        on:click={() =>
+                                                            startEditExpense(
+                                                                expense,
+                                                            )}
                                                         class="w-10 h-10 flex items-center justify-center bg-dark-200 text-primary rounded-lg hover:bg-dark-100 transition border border-dark-100"
                                                         title="Edit"
                                                     >
@@ -1188,7 +1463,10 @@
                                                         </svg>
                                                     </button>
                                                     <button
-                                                        on:click={() => deleteExpense(expense.id)}
+                                                        on:click={() =>
+                                                            deleteExpense(
+                                                                expense.id,
+                                                            )}
                                                         class="w-10 h-10 flex items-center justify-center bg-dark-200 text-red-400 rounded-lg hover:bg-dark-100 transition border border-dark-100"
                                                         title="Delete"
                                                     >
@@ -1217,9 +1495,15 @@
                         {#if activeTab === "balances"}
                             <div class="space-y-3">
                                 {#each balances as balance}
-                                    <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
-                                        <div class="flex items-start gap-4 mb-2">
-                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <div
+                                        class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70"
+                                    >
+                                        <div
+                                            class="flex items-start gap-4 mb-2"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3 flex-1 min-w-0"
+                                            >
                                                 {#if balance.avatarUrl}
                                                     <img
                                                         src={`/api/receipts/view/${encodeURIComponent(
@@ -1232,29 +1516,46 @@
                                                     <div
                                                         class="h-10 w-10 rounded-xl bg-dark-200 text-primary flex items-center justify-center text-sm font-semibold"
                                                     >
-                                                        {balance.memberName.slice(0, 1).toUpperCase()}
+                                                        {balance.memberName
+                                                            .slice(0, 1)
+                                                            .toUpperCase()}
                                                     </div>
                                                 {/if}
                                                 <div class="min-w-0">
-                                                    <div class="font-semibold text-white">{balance.memberName}</div>
+                                                    <div
+                                                        class="font-semibold text-white"
+                                                    >
+                                                        {balance.memberName}
+                                                    </div>
                                                     {#if balance.isGuest}
-                                                        <div class="text-xs text-gray-500 mb-2">Guest member</div>
+                                                        <div
+                                                            class="text-xs text-gray-500 mb-2"
+                                                        >
+                                                            Guest member
+                                                        </div>
                                                     {/if}
 
                                                     {#if balance.balanceByCurrency && balance.balanceByCurrency.length > 0}
-                                                        <div class="mt-2 space-y-1">
+                                                        <div
+                                                            class="mt-2 space-y-1"
+                                                        >
                                                             {#each balance.balanceByCurrency as currBal}
                                                                 <div
-                                                                    class="text-sm font-medium {currBal.amount > 0
+                                                                    class="text-sm font-medium {currBal.amount >
+                                                                    0
                                                                         ? 'text-green-400'
-                                                                        : currBal.amount < 0
+                                                                        : currBal.amount <
+                                                                            0
                                                                           ? 'text-red-400'
                                                                           : 'text-gray-400'}"
                                                                 >
-                                                                    {currBal.amount > 0
+                                                                    {currBal.amount >
+                                                                    0
                                                                         ? "Owed: +"
                                                                         : "Owes: "}{formatCurrency(
-                                                                        Math.abs(currBal.amount),
+                                                                        Math.abs(
+                                                                            currBal.amount,
+                                                                        ),
                                                                     )}
                                                                     {currBal.currency}
                                                                 </div>
@@ -1263,10 +1564,15 @@
                                                                 <div
                                                                     class="text-xs text-gray-500 mt-1 pt-1 border-t border-dark-100"
                                                                 >
-                                                                    Total in {group?.baseCurrency || "EUR"}: {balance.balance >
+                                                                    Total in {group?.baseCurrency ||
+                                                                        "EUR"}: {balance.balance >
                                                                     0
                                                                         ? "+"
-                                                                        : ""}{formatCurrency(Math.abs(balance.balance))}
+                                                                        : ""}{formatCurrency(
+                                                                        Math.abs(
+                                                                            balance.balance,
+                                                                        ),
+                                                                    )}
                                                                 </div>
                                                             {/if}
                                                         </div>
@@ -1275,22 +1581,32 @@
                                             </div>
                                             <div class="text-right shrink-0">
                                                 <div
-                                                    class="text-xl font-bold {balance.balance > 0
+                                                    class="text-xl font-bold {balance.balance >
+                                                    0
                                                         ? 'text-green-400'
                                                         : balance.balance < 0
                                                           ? 'text-red-400'
                                                           : 'text-gray-400'}"
                                                 >
                                                     {#if balance.balance > 0}
-                                                        +{formatCurrency(balance.balance)}
+                                                        +{formatCurrency(
+                                                            balance.balance,
+                                                        )}
                                                     {:else if balance.balance < 0}
-                                                        -{formatCurrency(Math.abs(balance.balance))}
+                                                        -{formatCurrency(
+                                                            Math.abs(
+                                                                balance.balance,
+                                                            ),
+                                                        )}
                                                     {:else}
                                                         Settled
                                                     {/if}
                                                 </div>
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    {group?.baseCurrency || "EUR"}
+                                                <div
+                                                    class="text-xs text-gray-500 mt-1"
+                                                >
+                                                    {group?.baseCurrency ||
+                                                        "EUR"}
                                                 </div>
                                             </div>
                                         </div>
@@ -1301,35 +1617,67 @@
 
                         {#if activeTab === "settlements"}
                             {#if settlements.length === 0}
-                                <div class="text-center py-12 bg-dark-300 rounded-2xl">
-                                    <p class="text-gray-400">No settlements recorded yet.</p>
+                                <div
+                                    class="text-center py-12 bg-dark-300 rounded-2xl"
+                                >
+                                    <p class="text-gray-400">
+                                        No settlements recorded yet.
+                                    </p>
                                 </div>
                             {:else}
                                 <div class="space-y-3">
                                     {#each settlements as settlement}
-                                        <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
-                                            <div class="flex justify-between items-start">
+                                        <div
+                                            class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70"
+                                        >
+                                            <div
+                                                class="flex justify-between items-start"
+                                            >
                                                 <div>
                                                     <div class="text-white">
-                                                        <span class="font-semibold"
-                                                            >{getMemberName(settlement.fromMember)}</span
+                                                        <span
+                                                            class="font-semibold"
+                                                            >{getMemberName(
+                                                                settlement.fromMember,
+                                                            )}</span
                                                         >
-                                                        <span class="text-gray-400"> paid </span>
-                                                        <span class="font-semibold"
-                                                            >{getMemberName(settlement.toMember)}</span
+                                                        <span
+                                                            class="text-gray-400"
+                                                        >
+                                                            paid
+                                                        </span>
+                                                        <span
+                                                            class="font-semibold"
+                                                            >{getMemberName(
+                                                                settlement.toMember,
+                                                            )}</span
                                                         >
                                                     </div>
-                                                    <div class="text-xs text-gray-500 mt-1">
-                                                        {formatDate(settlement.createdAt)}
+                                                    <div
+                                                        class="text-xs text-gray-500 mt-1"
+                                                    >
+                                                        {formatDate(
+                                                            settlement.createdAt,
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div class="text-lg font-bold text-primary">
-                                                    {formatCurrency(settlement.amount)}
-                                                    {settlement.currency || "EUR"}
+                                                <div
+                                                    class="text-lg font-bold text-primary"
+                                                >
+                                                    {formatCurrency(
+                                                        settlement.amount,
+                                                    )}
+                                                    {settlement.currency ||
+                                                        "EUR"}
                                                     {#if settlement.currency && settlement.currency !== group?.baseCurrency && settlement.exchangeRate}
-                                                        <div class="text-xs text-gray-500 font-normal mt-0.5">
-                                                            @ {settlement.exchangeRate.toFixed(4)}
-                                                            {group?.baseCurrency || "EUR"}/{settlement.currency}
+                                                        <div
+                                                            class="text-xs text-gray-500 font-normal mt-0.5"
+                                                        >
+                                                            @ {settlement.exchangeRate.toFixed(
+                                                                4,
+                                                            )}
+                                                            {group?.baseCurrency ||
+                                                                "EUR"}/{settlement.currency}
                                                         </div>
                                                     {/if}
                                                 </div>
@@ -1359,30 +1707,52 @@
                             <div class="space-y-4">
                                 {#if pendingInvitations.length > 0}
                                     <div>
-                                        <h3 class="text-lg font-semibold text-white mb-3">Pending Invitations</h3>
+                                        <h3
+                                            class="text-lg font-semibold text-white mb-3"
+                                        >
+                                            Pending Invitations
+                                        </h3>
                                         <div class="space-y-2">
                                             {#each pendingInvitations as invitation}
-                                                <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
-                                                    <div class="flex justify-between items-center">
+                                                <div
+                                                    class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70"
+                                                >
+                                                    <div
+                                                        class="flex justify-between items-center"
+                                                    >
                                                         <div>
-                                                            <div class="font-semibold text-white">
+                                                            <div
+                                                                class="font-semibold text-white"
+                                                            >
                                                                 {invitation.email}
                                                             </div>
-                                                            <div class="text-sm text-gray-400">
-                                                                Invited by {invitation.invitedBy.name}
+                                                            <div
+                                                                class="text-sm text-gray-400"
+                                                            >
+                                                                Invited by {invitation
+                                                                    .invitedBy
+                                                                    .name}
                                                                 {#if invitation.type === "token"}
                                                                     • New user
                                                                 {:else}
-                                                                    • Existing user
+                                                                    • Existing
+                                                                    user
                                                                 {/if}
                                                             </div>
-                                                            <div class="text-xs text-gray-500 mt-1">
-                                                                {formatDate(invitation.createdAt)}
+                                                            <div
+                                                                class="text-xs text-gray-500 mt-1"
+                                                            >
+                                                                {formatDate(
+                                                                    invitation.createdAt,
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <button
                                                             on:click={() =>
-                                                                revokeInvitation(invitation.id, invitation.type)}
+                                                                revokeInvitation(
+                                                                    invitation.id,
+                                                                    invitation.type,
+                                                                )}
                                                             class="text-red-400 hover:text-red-300 text-sm"
                                                         >
                                                             Revoke
@@ -1395,15 +1765,27 @@
                                 {/if}
 
                                 <div>
-                                    <h3 class="text-lg font-semibold text-white mb-3">All Members</h3>
+                                    <h3
+                                        class="text-lg font-semibold text-white mb-3"
+                                    >
+                                        All Members
+                                    </h3>
                                     <div class="space-y-2">
                                         {#each allMembers as member}
-                                            <div class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70">
-                                                <div class="flex justify-between items-center">
-                                                    <div class="flex items-center gap-3">
+                                            <div
+                                                class="bg-dark-300/70 p-4 rounded-2xl border border-dark-100/70"
+                                            >
+                                                <div
+                                                    class="flex justify-between items-center"
+                                                >
+                                                    <div
+                                                        class="flex items-center gap-3"
+                                                    >
                                                         {#if getMemberAvatar(member)}
                                                             <img
-                                                                src={getMemberAvatar(member)}
+                                                                src={getMemberAvatar(
+                                                                    member,
+                                                                )}
                                                                 alt="Member avatar"
                                                                 class="h-11 w-11 rounded-2xl object-cover border border-dark-100"
                                                             />
@@ -1411,27 +1793,49 @@
                                                             <div
                                                                 class="h-11 w-11 rounded-2xl bg-dark-200 text-primary flex items-center justify-center text-sm font-semibold"
                                                             >
-                                                                {getMemberName(member).slice(0, 1).toUpperCase()}
+                                                                {getMemberName(
+                                                                    member,
+                                                                )
+                                                                    .slice(0, 1)
+                                                                    .toUpperCase()}
                                                             </div>
                                                         {/if}
                                                         <div>
-                                                            <div class="font-semibold text-white">
-                                                                {getMemberName(member)}
+                                                            <div
+                                                                class="font-semibold text-white"
+                                                            >
+                                                                {getMemberName(
+                                                                    member,
+                                                                )}
                                                             </div>
                                                             {#if member.user}
-                                                                <div class="text-sm text-gray-400">
-                                                                    {member.user.email}
+                                                                <div
+                                                                    class="text-sm text-gray-400"
+                                                                >
+                                                                    {member.user
+                                                                        .email}
                                                                 </div>
                                                             {:else}
-                                                                <div class="text-sm text-gray-400">Guest user</div>
+                                                                <div
+                                                                    class="text-sm text-gray-400"
+                                                                >
+                                                                    Guest user
+                                                                </div>
                                                             {/if}
                                                         </div>
                                                     </div>
                                                     {#if member.userId !== null}
-                                                        <div class="text-xs text-primary">Registered</div>
+                                                        <div
+                                                            class="text-xs text-primary"
+                                                        >
+                                                            Registered
+                                                        </div>
                                                     {:else}
                                                         <button
-                                                            on:click={() => deleteGuestMember(member.id)}
+                                                            on:click={() =>
+                                                                deleteGuestMember(
+                                                                    member.id,
+                                                                )}
                                                             class="text-red-400 hover:text-red-300 text-sm"
                                                         >
                                                             Remove
@@ -1447,8 +1851,12 @@
 
                         {#if activeTab === "settings"}
                             {#if group.createdBy === $user?.id}
-                                <div class="bg-dark-300 p-6 rounded-2xl border border-dark-100">
-                                    <div class="flex flex-wrap gap-6 items-start">
+                                <div
+                                    class="bg-dark-300 p-6 rounded-2xl border border-dark-100"
+                                >
+                                    <div
+                                        class="flex flex-wrap gap-6 items-start"
+                                    >
                                         {#if group.imageUrl}
                                             <img
                                                 src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
@@ -1463,8 +1871,15 @@
                                             </div>
                                         {/if}
                                         <div class="flex-1 min-w-[220px]">
-                                            <h3 class="text-2xl font-bold text-white mb-2">Group Settings</h3>
-                                            <p class="text-sm text-gray-400">Manage your group details and members.</p>
+                                            <h3
+                                                class="text-2xl font-bold text-white mb-2"
+                                            >
+                                                Group Settings
+                                            </h3>
+                                            <p class="text-sm text-gray-400">
+                                                Manage your group details and
+                                                members.
+                                            </p>
                                         </div>
                                     </div>
 
@@ -1476,12 +1891,19 @@
                                         </div>
                                     {/if}
 
-                                    <form on:submit|preventDefault={saveGroupSettings} class="space-y-6 mt-6">
+                                    <form
+                                        on:submit|preventDefault={saveGroupSettings}
+                                        class="space-y-6 mt-6"
+                                    >
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                            <label
+                                                class="block text-sm font-medium text-gray-300 mb-2"
+                                            >
                                                 Group Image
                                             </label>
-                                            <div class="flex flex-wrap items-center gap-4">
+                                            <div
+                                                class="flex flex-wrap items-center gap-4"
+                                            >
                                                 {#if group.imageUrl}
                                                     <img
                                                         src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
@@ -1492,13 +1914,18 @@
                                                     <div
                                                         class="h-16 w-16 rounded-2xl bg-dark-200 text-primary flex items-center justify-center font-semibold"
                                                     >
-                                                        {group.name?.slice(0, 1) || "G"}
+                                                        {group.name?.slice(
+                                                            0,
+                                                            1,
+                                                        ) || "G"}
                                                     </div>
                                                 {/if}
                                                 <label
                                                     class="inline-flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200/70 px-4 py-2 text-sm text-gray-200 hover:bg-dark-100 cursor-pointer"
                                                 >
-                                                    {uploadingGroupImage ? "Uploading..." : "Upload image"}
+                                                    {uploadingGroupImage
+                                                        ? "Uploading..."
+                                                        : "Upload image"}
                                                     <input
                                                         type="file"
                                                         accept="image/*"
@@ -1507,8 +1934,11 @@
                                                         on:change={handleGroupImageChange}
                                                     />
                                                 </label>
-                                                <div class="text-xs text-gray-500">
-                                                    JPG, PNG, GIF, or WebP. Max 8MB.
+                                                <div
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    JPG, PNG, GIF, or WebP. Max
+                                                    8MB.
                                                 </div>
                                             </div>
                                         </div>
@@ -1539,7 +1969,9 @@
                                             </label>
                                             <textarea
                                                 id="settingsGroupDescription"
-                                                bind:value={editGroupDescription}
+                                                bind:value={
+                                                    editGroupDescription
+                                                }
                                                 rows="3"
                                                 class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
                                                 placeholder="What is this group for?"
@@ -1559,12 +1991,17 @@
                                                 class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
                                             >
                                                 {#each supportedCurrencies as curr}
-                                                    <option value={curr}>{curr}</option>
+                                                    <option value={curr}
+                                                        >{curr}</option
+                                                    >
                                                 {/each}
                                             </select>
-                                            <p class="text-xs text-gray-400 mt-1">
-                                                The base currency is used to display total balances when multiple
-                                                currencies are used.
+                                            <p
+                                                class="text-xs text-gray-400 mt-1"
+                                            >
+                                                The base currency is used to
+                                                display total balances when
+                                                multiple currencies are used.
                                             </p>
                                         </div>
 
@@ -1576,15 +2013,23 @@
                                         </button>
                                     </form>
 
-                                    <div class="mt-6 pt-6 border-t border-dark-100">
-                                        <h4 class="text-lg font-semibold text-white mb-3">Archive Group</h4>
+                                    <div
+                                        class="mt-6 pt-6 border-t border-dark-100"
+                                    >
+                                        <h4
+                                            class="text-lg font-semibold text-white mb-3"
+                                        >
+                                            Archive Group
+                                        </h4>
                                         <p class="text-sm text-gray-400 mb-4">
                                             {#if group.archived}
-                                                This group is currently archived. Unarchive it to add expenses or settle
-                                                debts.
+                                                This group is currently
+                                                archived. Unarchive it to add
+                                                expenses or settle debts.
                                             {:else}
-                                                Archive this group to hide it from your groups list. You can unarchive
-                                                it later if needed.
+                                                Archive this group to hide it
+                                                from your groups list. You can
+                                                unarchive it later if needed.
                                             {/if}
                                         </p>
                                         <button
@@ -1594,13 +2039,20 @@
                                                 ? 'bg-primary text-dark'
                                                 : 'bg-dark-200 text-white'} py-3 px-6 rounded-lg font-semibold hover:opacity-80 transition"
                                         >
-                                            {group.archived ? "Unarchive Group" : "Archive Group"}
+                                            {group.archived
+                                                ? "Unarchive Group"
+                                                : "Archive Group"}
                                         </button>
                                     </div>
                                 </div>
                             {:else}
-                                <div class="text-center py-12 bg-dark-300 rounded-2xl">
-                                    <p class="text-gray-400">Only the group creator can modify settings.</p>
+                                <div
+                                    class="text-center py-12 bg-dark-300 rounded-2xl"
+                                >
+                                    <p class="text-gray-400">
+                                        Only the group creator can modify
+                                        settings.
+                                    </p>
                                 </div>
                             {/if}
                         {/if}
@@ -1609,26 +2061,45 @@
             </main>
 
             <RightSidebar>
-                <div class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
-                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Group balances</div>
+                <div
+                    class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4"
+                >
+                    <div
+                        class="text-xs uppercase tracking-[0.2em] text-gray-500"
+                    >
+                        Group balances
+                    </div>
                     {#if balances.length === 0}
-                        <div class="mt-3 text-sm text-gray-400">No balances yet.</div>
+                        <div class="mt-3 text-sm text-gray-400">
+                            No balances yet.
+                        </div>
                     {:else}
                         <div class="mt-4 space-y-3">
                             {#each balances.slice(0, 4) as balance}
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <div class="text-sm font-semibold text-white">{balance.memberName}</div>
-                                        <div class="text-xs text-gray-500">{group?.baseCurrency || "EUR"}</div>
+                                        <div
+                                            class="text-sm font-semibold text-white"
+                                        >
+                                            {balance.memberName}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {group?.baseCurrency || "EUR"}
+                                        </div>
                                     </div>
                                     <div
-                                        class="text-sm font-semibold {balance.balance > 0
+                                        class="text-sm font-semibold {balance.balance >
+                                        0
                                             ? 'text-green-400'
                                             : balance.balance < 0
                                               ? 'text-red-400'
                                               : 'text-gray-400'}"
                                     >
-                                        {balance.balance > 0 ? "+" : balance.balance < 0 ? "-" : ""}{formatCurrency(
+                                        {balance.balance > 0
+                                            ? "+"
+                                            : balance.balance < 0
+                                              ? "-"
+                                              : ""}{formatCurrency(
                                             Math.abs(balance.balance),
                                         )}
                                     </div>
@@ -1644,19 +2115,31 @@
                     {/if}
                 </div>
 
-                <div class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
-                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Recent activity</div>
+                <div
+                    class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4"
+                >
+                    <div
+                        class="text-xs uppercase tracking-[0.2em] text-gray-500"
+                    >
+                        Recent activity
+                    </div>
                     <div class="mt-4 space-y-3">
                         {#each expenses.slice(0, 4) as expense}
                             <div class="flex items-center gap-3">
                                 <div
                                     class="h-9 w-9 rounded-xl bg-dark-200 flex items-center justify-center text-sm font-semibold text-primary"
                                 >
-                                    {expense.description.slice(0, 1).toUpperCase()}
+                                    {expense.description
+                                        .slice(0, 1)
+                                        .toUpperCase()}
                                 </div>
                                 <div class="flex-1">
-                                    <div class="text-sm text-white">{expense.description}</div>
-                                    <div class="text-xs text-gray-500">{formatDate(expense.createdAt)}</div>
+                                    <div class="text-sm text-white">
+                                        {expense.description}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {formatDate(expense.createdAt)}
+                                    </div>
                                 </div>
                                 <div class="text-sm font-semibold text-primary">
                                     {formatCurrency(expense.amount)}
@@ -1664,13 +2147,21 @@
                             </div>
                         {/each}
                         {#if expenses.length === 0}
-                            <div class="text-sm text-gray-400">Activity feed coming soon.</div>
+                            <div class="text-sm text-gray-400">
+                                Activity feed coming soon.
+                            </div>
                         {/if}
                     </div>
                 </div>
 
-                <div class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
-                    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Group settings</div>
+                <div
+                    class="mt-6 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4"
+                >
+                    <div
+                        class="text-xs uppercase tracking-[0.2em] text-gray-500"
+                    >
+                        Group settings
+                    </div>
                     <div class="mt-4 space-y-2">
                         <button
                             on:click={() => (activeTab = "settings")}
@@ -1692,13 +2183,19 @@
 </div>
 
 {#if showAddExpense && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">New expense</div>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        New expense
+                    </div>
                     <h3 class="text-2xl font-bold text-white">Add Expense</h3>
                 </div>
                 <div
@@ -1708,12 +2205,15 @@
                 </div>
             </div>
             <div class="mb-4">
-                <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Split category</div>
+                <div class="text-xs uppercase tracking-[0.3em] text-gray-500">
+                    Split category
+                </div>
                 <div class="mt-3 flex flex-wrap gap-2">
                     <button
                         type="button"
                         on:click={() => setSplitMode("amounts")}
-                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'amounts'
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode ===
+                        'amounts'
                             ? 'bg-primary text-dark'
                             : 'bg-dark-200 text-gray-300 hover:text-white'}"
                     >
@@ -1722,7 +2222,8 @@
                     <button
                         type="button"
                         on:click={() => setSplitMode("percent")}
-                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'percent'
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode ===
+                        'percent'
                             ? 'bg-primary text-dark'
                             : 'bg-dark-200 text-gray-300 hover:text-white'}"
                     >
@@ -1730,12 +2231,19 @@
                     </button>
                 </div>
                 {#if splitMode === "percent"}
-                    <p class="mt-2 text-xs text-gray-400">Percentages must total 100%.</p>
+                    <p class="mt-2 text-xs text-gray-400">
+                        Percentages must total 100%.
+                    </p>
                 {/if}
             </div>
             <form on:submit|preventDefault={addExpense} class="space-y-4">
                 <div>
-                    <label for="description" class="block text-sm font-medium text-gray-300 mb-2"> Description </label>
+                    <label
+                        for="description"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Description
+                    </label>
                     <input
                         type="text"
                         id="description"
@@ -1746,7 +2254,12 @@
                     />
                 </div>
                 <div>
-                    <label for="note" class="block text-sm font-medium text-gray-300 mb-2"> Note (optional) </label>
+                    <label
+                        for="note"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Note (optional)
+                    </label>
                     <textarea
                         id="note"
                         bind:value={expenseNote}
@@ -1757,9 +2270,18 @@
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                        <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
-                            <span class="text-sm text-gray-400">{expenseCurrency}</span>
+                        <label
+                            for="amount"
+                            class="block text-sm font-medium text-gray-300 mb-2"
+                        >
+                            Amount
+                        </label>
+                        <div
+                            class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2"
+                        >
+                            <span class="text-sm text-gray-400"
+                                >{expenseCurrency}</span
+                            >
                             <input
                                 type="number"
                                 id="amount"
@@ -1773,7 +2295,12 @@
                         </div>
                     </div>
                     <div>
-                        <label for="currency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
+                        <label
+                            for="currency"
+                            class="block text-sm font-medium text-gray-300 mb-2"
+                        >
+                            Currency
+                        </label>
                         <select
                             id="currency"
                             bind:value={expenseCurrency}
@@ -1786,11 +2313,21 @@
                     </div>
                 </div>
                 <div>
-                    <label for="expenseDate" class="block text-sm font-medium text-gray-300 mb-2">
+                    <label
+                        for="expenseDate"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
                         Date (optional)
                     </label>
-                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div
+                        class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2"
+                    >
+                        <svg
+                            class="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
@@ -1806,10 +2343,17 @@
                             class="w-full bg-transparent text-white focus:outline-none"
                         />
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Leave empty to use today's date
+                    </p>
                 </div>
                 <div>
-                    <label for="paidBy" class="block text-sm font-medium text-gray-300 mb-2"> Paid by </label>
+                    <label
+                        for="paidBy"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Paid by
+                    </label>
                     <select
                         id="paidBy"
                         bind:value={expensePaidBy}
@@ -1825,7 +2369,9 @@
                             </option>
                         {/each}
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Select who paid for this expense
+                    </p>
                 </div>
                 <!-- Attachments Section -->
                 <div>
@@ -1834,7 +2380,9 @@
                             Attachments ({expenseAttachments.length}/5)
                         </label>
                         {#if expenseAttachments.length < 5}
-                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
+                            <label
+                                class="text-xs text-primary hover:text-primary-400 cursor-pointer"
+                            >
                                 + Add File
                                 <input
                                     type="file"
@@ -1855,17 +2403,22 @@
                         />
                     {:else}
                         <p class="text-xs text-gray-400">
-                            You can attach images, PDFs, spreadsheets, or documents (max 5 files, 10MB each)
+                            You can attach images, PDFs, spreadsheets, or
+                            documents (max 5 files, 10MB each)
                         </p>
                     {/if}
                     {#if uploadingAttachment}
-                        <div class="text-xs text-gray-400 mt-2">Uploading...</div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            Uploading...
+                        </div>
                     {/if}
                 </div>
                 {#if receiptItems.length > 0 && splitMode === "amounts"}
                     <div class="border border-dark-100 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-sm font-medium text-white">Receipt Items</h4>
+                            <h4 class="text-sm font-medium text-white">
+                                Receipt Items
+                            </h4>
                             <button
                                 type="button"
                                 on:click={addReceiptItem}
@@ -1875,10 +2428,24 @@
                             </button>
                         </div>
                         <!-- Column Headers - Hidden on mobile -->
-                        <div class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg">
-                            <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
-                            <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
-                            <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
+                        <div
+                            class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg"
+                        >
+                            <div
+                                class="flex-1 text-xs font-medium text-gray-400"
+                            >
+                                Name
+                            </div>
+                            <div
+                                class="w-16 text-xs font-medium text-gray-400 text-center"
+                            >
+                                Qty
+                            </div>
+                            <div
+                                class="w-20 text-xs font-medium text-gray-400 text-center"
+                            >
+                                Price
+                            </div>
                             <div class="w-6"></div>
                         </div>
                         <div class="space-y-3 max-h-64 overflow-y-auto">
@@ -1886,11 +2453,16 @@
                                 <div class="bg-dark-200 p-3 rounded-lg">
                                     <!-- Mobile Layout: Stacked -->
                                     <div class="md:hidden space-y-2">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-xs text-gray-400">Item {index + 1}</span>
+                                        <div
+                                            class="flex items-center justify-between mb-2"
+                                        >
+                                            <span class="text-xs text-gray-400"
+                                                >Item {index + 1}</span
+                                            >
                                             <button
                                                 type="button"
-                                                on:click={() => deleteReceiptItem(index)}
+                                                on:click={() =>
+                                                    deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
                                                 <svg
@@ -1909,7 +2481,10 @@
                                             </button>
                                         </div>
                                         <div>
-                                            <label class="text-xs text-gray-400 block mb-1">Name</label>
+                                            <label
+                                                class="text-xs text-gray-400 block mb-1"
+                                                >Name</label
+                                            >
                                             <input
                                                 type="text"
                                                 bind:value={item.description}
@@ -1920,7 +2495,10 @@
                                         </div>
                                         <div class="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label class="text-xs text-gray-400 block mb-1">Qty</label>
+                                                <label
+                                                    class="text-xs text-gray-400 block mb-1"
+                                                    >Qty</label
+                                                >
                                                 <input
                                                     type="number"
                                                     bind:value={item.quantity}
@@ -1931,7 +2509,10 @@
                                                 />
                                             </div>
                                             <div>
-                                                <label class="text-xs text-gray-400 block mb-1">Price</label>
+                                                <label
+                                                    class="text-xs text-gray-400 block mb-1"
+                                                    >Price</label
+                                                >
                                                 <input
                                                     type="number"
                                                     bind:value={item.price}
@@ -1973,10 +2554,16 @@
                                         />
                                         <button
                                             type="button"
-                                            on:click={() => deleteReceiptItem(index)}
+                                            on:click={() =>
+                                                deleteReceiptItem(index)}
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <path
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
@@ -1988,16 +2575,31 @@
                                     </div>
 
                                     <div class="flex flex-wrap gap-2 mt-2">
-                                        <span class="text-xs text-gray-400">Assign to:</span>
+                                        <span class="text-xs text-gray-400"
+                                            >Assign to:</span
+                                        >
                                         {#each allMembers as member}
-                                            <label class="flex items-center gap-1">
+                                            <label
+                                                class="flex items-center gap-1"
+                                            >
                                                 <input
                                                     type="checkbox"
-                                                    checked={item.assignedTo.includes(member.id)}
-                                                    on:change={() => toggleItemAssignment(index, member.id)}
+                                                    checked={item.assignedTo.includes(
+                                                        member.id,
+                                                    )}
+                                                    on:change={() =>
+                                                        toggleItemAssignment(
+                                                            index,
+                                                            member.id,
+                                                        )}
                                                     class="w-3 h-3 text-primary bg-dark border-dark-100 rounded"
                                                 />
-                                                <span class="text-xs text-gray-300">{getMemberName(member)}</span>
+                                                <span
+                                                    class="text-xs text-gray-300"
+                                                    >{getMemberName(
+                                                        member,
+                                                    )}</span
+                                                >
                                             </label>
                                         {/each}
                                     </div>
@@ -2005,13 +2607,16 @@
                             {/each}
                         </div>
                         <div class="mt-2 text-xs text-gray-400">
-                            Auto-calculated from items. Assignments update split shares.
+                            Auto-calculated from items. Assignments update split
+                            shares.
                         </div>
                     </div>
                 {/if}
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-300">Split with</label>
+                        <label class="block text-sm font-medium text-gray-300"
+                            >Split with</label
+                        >
                         <button
                             type="button"
                             on:click={selectAllMembers}
@@ -2020,18 +2625,24 @@
                             Select All
                         </button>
                     </div>
-                    <div class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto">
+                    <div
+                        class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto"
+                    >
                         {#each allMembers as member}
                             <label
                                 class="flex items-center space-x-2 p-2 bg-dark-200 rounded-lg cursor-pointer border border-dark-100 hover:border-primary/50 transition"
                             >
                                 <input
                                     type="checkbox"
-                                    checked={selectedMembers.includes(member.id)}
+                                    checked={selectedMembers.includes(
+                                        member.id,
+                                    )}
                                     on:change={() => toggleMember(member.id)}
                                     class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
                                 />
-                                <span class="text-white">{getMemberName(member)}</span>
+                                <span class="text-white"
+                                    >{getMemberName(member)}</span
+                                >
                             </label>
                         {/each}
                     </div>
@@ -2039,8 +2650,13 @@
                         <div class="mt-3 p-3 bg-dark-200 rounded-lg">
                             {#if splitMode === "percent"}
                                 <div class="space-y-2 mb-2">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-medium text-gray-300">Custom percentages</span>
+                                    <div
+                                        class="flex justify-between items-center"
+                                    >
+                                        <span
+                                            class="text-xs font-medium text-gray-300"
+                                            >Custom percentages</span
+                                        >
                                         <button
                                             type="button"
                                             on:click={distributePercentEvenly}
@@ -2050,43 +2666,82 @@
                                         </button>
                                     </div>
                                     {#each selectedMembers as memberId}
-                                        {@const member = allMembers.find((m) => m.id === memberId)}
+                                        {@const member = allMembers.find(
+                                            (m) => m.id === memberId,
+                                        )}
                                         {#if member}
-                                            {@const total = Number.parseFloat(expenseAmount || "0")}
-                                            {@const percent = Number.parseFloat(percentShares[memberId] || "0")}
-                                            <div class="flex items-center space-x-2">
-                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span>
-                                                <span class="text-[11px] text-gray-500">
-                                                    {formatCurrency((total * percent) / 100)} {expenseCurrency}
+                                            {@const total = Number.parseFloat(
+                                                expenseAmount || "0",
+                                            )}
+                                            {@const percent = Number.parseFloat(
+                                                percentShares[memberId] || "0",
+                                            )}
+                                            <div
+                                                class="flex items-center space-x-2"
+                                            >
+                                                <span
+                                                    class="text-xs text-gray-400 flex-1"
+                                                    >{getMemberName(
+                                                        member,
+                                                    )}</span
+                                                >
+                                                <span
+                                                    class="text-[11px] text-gray-500"
+                                                >
+                                                    {formatCurrency(
+                                                        (total * percent) / 100,
+                                                    )}
+                                                    {expenseCurrency}
                                                 </span>
-                                                <div class="flex items-center gap-2">
+                                                <div
+                                                    class="flex items-center gap-2"
+                                                >
                                                     <input
                                                         type="number"
-                                                        bind:value={percentShares[memberId]}
+                                                        bind:value={
+                                                            percentShares[
+                                                                memberId
+                                                            ]
+                                                        }
                                                         step="0.01"
                                                         min="0"
                                                         max="100"
                                                         placeholder="0"
                                                         class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
                                                     />
-                                                    <span class="text-xs text-gray-500">%</span>
+                                                    <span
+                                                        class="text-xs text-gray-500"
+                                                        >%</span
+                                                    >
                                                 </div>
                                             </div>
                                         {/if}
                                     {/each}
                                 </div>
                                 <div class="text-xs space-y-1">
-                                    <div class="flex justify-between text-gray-400">
+                                    <div
+                                        class="flex justify-between text-gray-400"
+                                    >
                                         <span>Total allocated:</span>
-                                        <span>{getPercentTotal().toFixed(2)}%</span>
+                                        <span
+                                            >{getPercentTotal().toFixed(
+                                                2,
+                                            )}%</span
+                                        >
                                     </div>
                                     <div
-                                        class="flex justify-between {Math.abs(getPercentRemaining()) < 0.01
+                                        class="flex justify-between {Math.abs(
+                                            getPercentRemaining(),
+                                        ) < 0.01
                                             ? 'text-green-400'
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>{getPercentRemaining().toFixed(2)}%</span>
+                                        <span
+                                            >{getPercentRemaining().toFixed(
+                                                2,
+                                            )}%</span
+                                        >
                                     </div>
                                 </div>
                             {:else}
@@ -2096,19 +2751,28 @@
                                         bind:checked={splitEvenly}
                                         class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
                                     />
-                                    <span class="text-sm text-gray-300">Split evenly</span>
+                                    <span class="text-sm text-gray-300"
+                                        >Split evenly</span
+                                    >
                                 </label>
                                 {#if splitEvenly}
                                     <p class="text-xs text-gray-400">
-                                        {selectedMembers.length} member(s) selected • {formatCurrency(
-                                            parseFloat(expenseAmount || "0") / selectedMembers.length,
+                                        {selectedMembers.length} member(s) selected
+                                        • {formatCurrency(
+                                            parseFloat(expenseAmount || "0") /
+                                                selectedMembers.length,
                                         )}
                                         {expenseCurrency} each
                                     </p>
                                 {:else}
                                     <div class="space-y-2 mb-2">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                        <div
+                                            class="flex justify-between items-center"
+                                        >
+                                            <span
+                                                class="text-xs font-medium text-gray-300"
+                                                >Custom amounts</span
+                                            >
                                             <button
                                                 type="button"
                                                 on:click={distributeEvenly}
@@ -2118,15 +2782,25 @@
                                             </button>
                                         </div>
                                         {#each selectedMembers as memberId}
-                                            {@const member = allMembers.find((m) => m.id === memberId)}
+                                            {@const member = allMembers.find(
+                                                (m) => m.id === memberId,
+                                            )}
                                             {#if member}
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-xs text-gray-400 flex-1">
+                                                <div
+                                                    class="flex items-center space-x-2"
+                                                >
+                                                    <span
+                                                        class="text-xs text-gray-400 flex-1"
+                                                    >
                                                         {getMemberName(member)}
                                                     </span>
                                                     <input
                                                         type="number"
-                                                        bind:value={customShares[memberId]}
+                                                        bind:value={
+                                                            customShares[
+                                                                memberId
+                                                            ]
+                                                        }
                                                         step="0.01"
                                                         min="0"
                                                         placeholder="0.00"
@@ -2137,17 +2811,31 @@
                                         {/each}
                                     </div>
                                     <div class="text-xs space-y-1">
-                                        <div class="flex justify-between text-gray-400">
+                                        <div
+                                            class="flex justify-between text-gray-400"
+                                        >
                                             <span>Total allocated:</span>
-                                            <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                            <span
+                                                >{formatCurrency(
+                                                    getCustomSharesTotal(),
+                                                )}
+                                                {expenseCurrency}</span
+                                            >
                                         </div>
                                         <div
-                                            class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                            class="flex justify-between {Math.abs(
+                                                getCustomSharesRemaining(),
+                                            ) < 0.01
                                                 ? 'text-green-400'
                                                 : 'text-red-400'}"
                                         >
                                             <span>Remaining:</span>
-                                            <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                            <span
+                                                >{formatCurrency(
+                                                    getCustomSharesRemaining(),
+                                                )}
+                                                {expenseCurrency}</span
+                                            >
                                         </div>
                                     </div>
                                 {/if}
@@ -2176,13 +2864,19 @@
 {/if}
 
 {#if showSettleDebt && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-5">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Settlement</div>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Settlement
+                    </div>
                     <h3 class="text-2xl font-bold text-white">Settle Debt</h3>
                 </div>
                 <div
@@ -2191,68 +2885,156 @@
                     OK
                 </div>
             </div>
-            <form on:submit|preventDefault={settleDebt} class="space-y-4">
+            <form on:submit|preventDefault={settleDebt} class="space-y-5">
+                <!-- Paying row -->
                 <div>
-                    <label for="fromMember" class="block text-sm font-medium text-gray-300 mb-2">
-                        From (who paid)
-                    </label>
-                    <select
-                        id="fromMember"
-                        bind:value={settleFromMember}
-                        required
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500 mb-2"
                     >
-                        <option value={0}>Select person</option>
-                        {#each allMembers as member}
-                            <option value={member.id}>{getMemberName(member)}</option>
+                        Paying
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        {#each sortedMembersForSettle as member}
+                            {@const bal = balances.find(
+                                (b) => b.memberId === member.id,
+                            )?.balance}
+                            <button
+                                type="button"
+                                on:click={() => selectSettleFrom(member.id)}
+                                class="flex flex-col items-center gap-1 min-w-[68px] p-2 m-0.5 rounded-xl transition-all {settleFromMember ===
+                                member.id
+                                    ? 'bg-primary/20 ring-2 ring-primary'
+                                    : 'bg-dark-200 hover:bg-dark-100'}"
+                            >
+                                {#if getMemberAvatar(member)}
+                                    <img
+                                        src={getMemberAvatar(member)}
+                                        alt=""
+                                        class="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                                    />
+                                {:else}
+                                    <div
+                                        class="h-10 w-10 rounded-full bg-dark-100 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0"
+                                    >
+                                        {getMemberName(member)
+                                            .slice(0, 1)
+                                            .toUpperCase()}
+                                    </div>
+                                {/if}
+                                <span
+                                    class="text-xs text-white w-16 text-center truncate leading-tight"
+                                >
+                                    {getMemberName(member).split(" ")[0]}
+                                </span>
+                            </button>
                         {/each}
-                    </select>
+                    </div>
                 </div>
-                <div>
-                    <label for="toMember" class="block text-sm font-medium text-gray-300 mb-2">
-                        To (who received)
-                    </label>
-                    <select
-                        id="toMember"
-                        bind:value={settleToMember}
-                        required
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
+
+                <!-- Connector arrow -->
+                <div class="flex items-center gap-3 text-gray-600">
+                    <div class="flex-1 h-px bg-dark-100"></div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 text-primary"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                     >
-                        <option value={0}>Select person</option>
-                        {#each allMembers as member}
-                            <option value={member.id}>{getMemberName(member)}</option>
-                        {/each}
-                    </select>
+                        <path
+                            fill-rule="evenodd"
+                            d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    <div class="flex-1 h-px bg-dark-100"></div>
                 </div>
+
+                <!-- Receiving row -->
                 <div>
-                    <label for="settleAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
-                        <span class="text-sm text-gray-400">{settleCurrency}</span>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500 mb-2"
+                    >
+                        Receiving
+                    </div>
+                    {#if sortedReceiversForSettle.length === 0}
+                        <p class="text-sm text-gray-500 italic">
+                            Select a paying person first
+                        </p>
+                    {:else}
+                        <div
+                            class="flex gap-2 overflow-x-auto pb-1 scrollbar-none"
+                        >
+                            {#each sortedReceiversForSettle as member}
+                                {@const pairwise = getPairwiseBalance(
+                                    settleFromMember,
+                                    member.id,
+                                )}
+                                <button
+                                    type="button"
+                                    on:click={() => selectSettleTo(member.id)}
+                                    class="flex flex-col items-center gap-1 min-w-[68px] p-2 m-0.5 rounded-xl transition-all {settleToMember ===
+                                    member.id
+                                        ? 'bg-primary/20 ring-2 ring-primary'
+                                        : 'bg-dark-200 hover:bg-dark-100'}"
+                                >
+                                    {#if getMemberAvatar(member)}
+                                        <img
+                                            src={getMemberAvatar(member)}
+                                            alt=""
+                                            class="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                                        />
+                                    {:else}
+                                        <div
+                                            class="h-10 w-10 rounded-full bg-dark-100 text-primary flex items-center justify-center text-sm font-bold flex-shrink-0"
+                                        >
+                                            {getMemberName(member)
+                                                .slice(0, 1)
+                                                .toUpperCase()}
+                                        </div>
+                                    {/if}
+                                    <span
+                                        class="text-xs text-white w-16 text-center truncate leading-tight"
+                                    >
+                                        {getMemberName(member).split(" ")[0]}
+                                    </span>
+                                </button>
+                            {/each}
+                        </div>
+                    {/if}
+                </div>
+
+                <!-- Amount + Currency combined field -->
+                <div>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500 mb-2"
+                    >
+                        Amount
+                    </div>
+                    <div
+                        class="flex items-center gap-2 rounded-xl border border-dark-100 bg-dark-200 px-4 py-3 focus-within:border-primary transition"
+                    >
+                        <select
+                            bind:value={settleCurrency}
+                            class="bg-transparent text-gray-400 text-sm focus:outline-none pr-1 cursor-pointer"
+                        >
+                            {#each supportedCurrencies as curr}
+                                <option value={curr}>{curr}</option>
+                            {/each}
+                        </select>
+                        <div class="w-px h-5 bg-dark-100"></div>
                         <input
                             type="number"
-                            id="settleAmount"
                             bind:value={settleAmount}
                             required
                             step="0.01"
                             min="0.01"
-                            class="w-full bg-transparent text-white focus:outline-none"
+                            class="w-full bg-transparent text-white text-xl font-semibold focus:outline-none"
                             placeholder="0.00"
                         />
                     </div>
                 </div>
-                <div>
-                    <label for="settleCurrency" class="block text-sm font-medium text-gray-300 mb-2"> Currency </label>
-                    <select
-                        id="settleCurrency"
-                        bind:value={settleCurrency}
-                        class="w-full px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-white focus:outline-none focus:border-primary"
-                    >
-                        {#each supportedCurrencies as curr}
-                            <option value={curr}>{curr}</option>
-                        {/each}
-                    </select>
-                </div>
-                <div class="flex gap-2">
+
+                <div class="flex gap-2 pt-1">
                     <button
                         type="submit"
                         class="flex-1 bg-primary text-dark py-2.5 px-4 rounded-xl font-semibold hover:bg-primary-400 transition"
@@ -2261,7 +3043,12 @@
                     </button>
                     <button
                         type="button"
-                        on:click={() => (showSettleDebt = false)}
+                        on:click={() => {
+                            showSettleDebt = false;
+                            settleFromMember = 0;
+                            settleToMember = 0;
+                            settleAmount = "";
+                        }}
                         class="flex-1 bg-dark-200 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel
@@ -2273,14 +3060,22 @@
 {/if}
 
 {#if showAddGuestMember && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Guest</div>
-                    <h3 class="text-2xl font-bold text-white">Add Guest Member</h3>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Guest
+                    </div>
+                    <h3 class="text-2xl font-bold text-white">
+                        Add Guest Member
+                    </h3>
                 </div>
                 <div
                     class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
@@ -2289,11 +3084,17 @@
                 </div>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                Guest members don't need an account. Perfect for visitors or people who don't want to register.
+                Guest members don't need an account. Perfect for visitors or
+                people who don't want to register.
             </p>
             <form on:submit|preventDefault={addGuestMember} class="space-y-4">
                 <div>
-                    <label for="guestMemberName" class="block text-sm font-medium text-gray-300 mb-2"> Name </label>
+                    <label
+                        for="guestMemberName"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Name
+                    </label>
                     <input
                         type="text"
                         id="guestMemberName"
@@ -2324,14 +3125,22 @@
 {/if}
 
 {#if showChangeCurrency && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Currency</div>
-                    <h3 class="text-2xl font-bold text-white">Change Base Currency</h3>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Currency
+                    </div>
+                    <h3 class="text-2xl font-bold text-white">
+                        Change Base Currency
+                    </h3>
                 </div>
                 <div
                     class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
@@ -2340,11 +3149,18 @@
                 </div>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                The base currency is used to display total balances when multiple currencies are used in the group.
+                The base currency is used to display total balances when
+                multiple currencies are used in the group.
             </p>
-            <form on:submit|preventDefault={updateBaseCurrency} class="space-y-4">
+            <form
+                on:submit|preventDefault={updateBaseCurrency}
+                class="space-y-4"
+            >
                 <div>
-                    <label for="baseCurrency" class="block text-sm font-medium text-gray-300 mb-2">
+                    <label
+                        for="baseCurrency"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
                         Base Currency
                     </label>
                     <select
@@ -2378,13 +3194,19 @@
 {/if}
 
 {#if showInviteMember && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Invite</div>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Invite
+                    </div>
                     <h3 class="text-2xl font-bold text-white">Invite Member</h3>
                 </div>
                 <div
@@ -2394,12 +3216,15 @@
                 </div>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                Invite a user by their email address. They will receive a notification and can accept or decline the
-                invitation.
+                Invite a user by their email address. They will receive a
+                notification and can accept or decline the invitation.
             </p>
             <form on:submit|preventDefault={inviteMember} class="space-y-4">
                 <div>
-                    <label for="inviteEmail" class="block text-sm font-medium text-gray-300 mb-2">
+                    <label
+                        for="inviteEmail"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
                         Email Address
                     </label>
                     <input
@@ -2432,18 +3257,25 @@
 {/if}
 
 {#if showScanReceipt && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-md w-full border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Receipt</div>
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Receipt
+                    </div>
                     <h3 class="text-2xl font-bold text-white">Scan Receipt</h3>
                 </div>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                Upload a photo of your receipt and we'll automatically extract the items and amounts.
+                Upload a photo of your receipt and we'll automatically extract
+                the items and amounts.
             </p>
             <div class="space-y-4">
                 <div>
@@ -2456,7 +3288,9 @@
                                 <div
                                     class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"
                                 ></div>
-                                <span class="text-gray-400">Analyzing receipt...</span>
+                                <span class="text-gray-400"
+                                    >Analyzing receipt...</span
+                                >
                             </div>
                         {:else}
                             <div class="flex flex-col items-center gap-2">
@@ -2479,8 +3313,12 @@
                                         d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                                     />
                                 </svg>
-                                <span class="text-gray-300">Click to upload receipt image</span>
-                                <span class="text-xs text-gray-400">JPG, PNG, or HEIC</span>
+                                <span class="text-gray-300"
+                                    >Click to upload receipt image</span
+                                >
+                                <span class="text-xs text-gray-400"
+                                    >JPG, PNG, or HEIC</span
+                                >
                             </div>
                         {/if}
                         <input
@@ -2515,7 +3353,11 @@
         tabindex="0"
         on:keydown={(e) => e.key === "Escape" && (previewImageUrl = null)}
     >
-        <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
+        <div
+            class="max-w-4xl max-h-full"
+            on:click|stopPropagation
+            role="presentation"
+        >
             <img
                 src={`/api/receipts/view/${encodeURIComponent(previewImageUrl)}`}
                 alt="Preview"
@@ -2556,50 +3398,65 @@
 {/if}
 
 {#if showEditExpense && group}
-    <div class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50">
+    <div
+        class="fixed inset-0 bg-black/80 flex items-end md:items-center justify-center p-4 z-50"
+    >
         <div
             class="bg-dark-300 p-6 rounded-t-3xl md:rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto border border-dark-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         >
-                <div class="flex items-center justify-between mb-4">
-                    <div>
-                        <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Edit</div>
-                        <h3 class="text-2xl font-bold text-white">Edit Expense</h3>
-                    </div>
-                    <div
-                        class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
-                    >
-                        ED
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Split category</div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            on:click={() => setSplitMode("amounts")}
-                            class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'amounts'
-                                ? 'bg-primary text-dark'
-                                : 'bg-dark-200 text-gray-300 hover:text-white'}"
-                        >
-                            Amounts
-                        </button>
-                        <button
-                            type="button"
-                            on:click={() => setSplitMode("percent")}
-                            class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode === 'percent'
-                                ? 'bg-primary text-dark'
-                                : 'bg-dark-200 text-gray-300 hover:text-white'}"
-                        >
-                            Percentage
-                        </button>
-                    </div>
-                    {#if splitMode === "percent"}
-                        <p class="mt-2 text-xs text-gray-400">Percentages must total 100%.</p>
-                    {/if}
-                </div>
-                <form on:submit|preventDefault={updateExpense} class="space-y-4">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <label for="editDescription" class="block text-sm font-medium text-gray-300 mb-2">
+                    <div
+                        class="text-xs uppercase tracking-[0.3em] text-gray-500"
+                    >
+                        Edit
+                    </div>
+                    <h3 class="text-2xl font-bold text-white">Edit Expense</h3>
+                </div>
+                <div
+                    class="h-10 w-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center font-semibold"
+                >
+                    ED
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="text-xs uppercase tracking-[0.3em] text-gray-500">
+                    Split category
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        on:click={() => setSplitMode("amounts")}
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode ===
+                        'amounts'
+                            ? 'bg-primary text-dark'
+                            : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                    >
+                        Amounts
+                    </button>
+                    <button
+                        type="button"
+                        on:click={() => setSplitMode("percent")}
+                        class="rounded-full px-4 py-1.5 text-xs font-semibold transition {splitMode ===
+                        'percent'
+                            ? 'bg-primary text-dark'
+                            : 'bg-dark-200 text-gray-300 hover:text-white'}"
+                    >
+                        Percentage
+                    </button>
+                </div>
+                {#if splitMode === "percent"}
+                    <p class="mt-2 text-xs text-gray-400">
+                        Percentages must total 100%.
+                    </p>
+                {/if}
+            </div>
+            <form on:submit|preventDefault={updateExpense} class="space-y-4">
+                <div>
+                    <label
+                        for="editDescription"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
                         Description
                     </label>
                     <input
@@ -2612,7 +3469,12 @@
                     />
                 </div>
                 <div>
-                    <label for="editNote" class="block text-sm font-medium text-gray-300 mb-2"> Note (optional) </label>
+                    <label
+                        for="editNote"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Note (optional)
+                    </label>
                     <textarea
                         id="editNote"
                         bind:value={expenseNote}
@@ -2623,9 +3485,18 @@
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label for="editAmount" class="block text-sm font-medium text-gray-300 mb-2"> Amount </label>
-                        <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
-                            <span class="text-sm text-gray-400">{expenseCurrency}</span>
+                        <label
+                            for="editAmount"
+                            class="block text-sm font-medium text-gray-300 mb-2"
+                        >
+                            Amount
+                        </label>
+                        <div
+                            class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2"
+                        >
+                            <span class="text-sm text-gray-400"
+                                >{expenseCurrency}</span
+                            >
                             <input
                                 type="number"
                                 id="editAmount"
@@ -2639,7 +3510,10 @@
                         </div>
                     </div>
                     <div>
-                        <label for="editCurrency" class="block text-sm font-medium text-gray-300 mb-2">
+                        <label
+                            for="editCurrency"
+                            class="block text-sm font-medium text-gray-300 mb-2"
+                        >
                             Currency
                         </label>
                         <select
@@ -2654,11 +3528,21 @@
                     </div>
                 </div>
                 <div>
-                    <label for="editExpenseDate" class="block text-sm font-medium text-gray-300 mb-2">
+                    <label
+                        for="editExpenseDate"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
                         Date (optional)
                     </label>
-                    <div class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div
+                        class="flex items-center gap-2 rounded-lg border border-dark-100 bg-dark-200 px-3 py-2"
+                    >
+                        <svg
+                            class="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
@@ -2674,10 +3558,17 @@
                             class="w-full bg-transparent text-white focus:outline-none"
                         />
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Leave empty to use today's date</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Leave empty to use today's date
+                    </p>
                 </div>
                 <div>
-                    <label for="editPaidBy" class="block text-sm font-medium text-gray-300 mb-2"> Paid by </label>
+                    <label
+                        for="editPaidBy"
+                        class="block text-sm font-medium text-gray-300 mb-2"
+                    >
+                        Paid by
+                    </label>
                     <select
                         id="editPaidBy"
                         bind:value={expensePaidBy}
@@ -2693,7 +3584,9 @@
                             </option>
                         {/each}
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">Select who paid for this expense</p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        Select who paid for this expense
+                    </p>
                 </div>
                 <!-- Attachments Section -->
                 <div>
@@ -2702,7 +3595,9 @@
                             Attachments ({expenseAttachments.length}/5)
                         </label>
                         {#if expenseAttachments.length < 5}
-                            <label class="text-xs text-primary hover:text-primary-400 cursor-pointer">
+                            <label
+                                class="text-xs text-primary hover:text-primary-400 cursor-pointer"
+                            >
                                 + Add File
                                 <input
                                     type="file"
@@ -2723,16 +3618,21 @@
                         />
                     {:else}
                         <p class="text-xs text-gray-400">
-                            You can attach images, PDFs, spreadsheets, or documents (max 5 files, 10MB each)
+                            You can attach images, PDFs, spreadsheets, or
+                            documents (max 5 files, 10MB each)
                         </p>
                     {/if}
                     {#if uploadingAttachment}
-                        <div class="text-xs text-gray-400 mt-2">Uploading...</div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            Uploading...
+                        </div>
                     {/if}
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-sm font-medium text-gray-300">Split with</label>
+                        <label class="block text-sm font-medium text-gray-300"
+                            >Split with</label
+                        >
                         <button
                             type="button"
                             on:click={selectAllMembers}
@@ -2741,18 +3641,24 @@
                             Select All
                         </button>
                     </div>
-                    <div class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto">
+                    <div
+                        class="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto"
+                    >
                         {#each allMembers as member}
                             <label
                                 class="flex items-center space-x-2 p-2 bg-dark-200 rounded-lg cursor-pointer border border-dark-100 hover:border-primary/50 transition"
                             >
                                 <input
                                     type="checkbox"
-                                    checked={selectedMembers.includes(member.id)}
+                                    checked={selectedMembers.includes(
+                                        member.id,
+                                    )}
                                     on:change={() => toggleMember(member.id)}
                                     class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
                                 />
-                                <span class="text-white">{getMemberName(member)}</span>
+                                <span class="text-white"
+                                    >{getMemberName(member)}</span
+                                >
                             </label>
                         {/each}
                     </div>
@@ -2760,8 +3666,13 @@
                         <div class="mt-3 p-3 bg-dark-200 rounded-lg">
                             {#if splitMode === "percent"}
                                 <div class="space-y-2 mb-2">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-medium text-gray-300">Custom percentages</span>
+                                    <div
+                                        class="flex justify-between items-center"
+                                    >
+                                        <span
+                                            class="text-xs font-medium text-gray-300"
+                                            >Custom percentages</span
+                                        >
                                         <button
                                             type="button"
                                             on:click={distributePercentEvenly}
@@ -2771,43 +3682,82 @@
                                         </button>
                                     </div>
                                     {#each selectedMembers as memberId}
-                                        {@const member = allMembers.find((m) => m.id === memberId)}
+                                        {@const member = allMembers.find(
+                                            (m) => m.id === memberId,
+                                        )}
                                         {#if member}
-                                            {@const total = Number.parseFloat(expenseAmount || "0")}
-                                            {@const percent = Number.parseFloat(percentShares[memberId] || "0")}
-                                            <div class="flex items-center space-x-2">
-                                                <span class="text-xs text-gray-400 flex-1">{getMemberName(member)}</span>
-                                                <span class="text-[11px] text-gray-500">
-                                                    {formatCurrency((total * percent) / 100)} {expenseCurrency}
+                                            {@const total = Number.parseFloat(
+                                                expenseAmount || "0",
+                                            )}
+                                            {@const percent = Number.parseFloat(
+                                                percentShares[memberId] || "0",
+                                            )}
+                                            <div
+                                                class="flex items-center space-x-2"
+                                            >
+                                                <span
+                                                    class="text-xs text-gray-400 flex-1"
+                                                    >{getMemberName(
+                                                        member,
+                                                    )}</span
+                                                >
+                                                <span
+                                                    class="text-[11px] text-gray-500"
+                                                >
+                                                    {formatCurrency(
+                                                        (total * percent) / 100,
+                                                    )}
+                                                    {expenseCurrency}
                                                 </span>
-                                                <div class="flex items-center gap-2">
+                                                <div
+                                                    class="flex items-center gap-2"
+                                                >
                                                     <input
                                                         type="number"
-                                                        bind:value={percentShares[memberId]}
+                                                        bind:value={
+                                                            percentShares[
+                                                                memberId
+                                                            ]
+                                                        }
                                                         step="0.01"
                                                         min="0"
                                                         max="100"
                                                         placeholder="0"
                                                         class="w-24 px-2 py-1 text-sm bg-dark-300 border border-dark-100 rounded text-white focus:outline-none focus:border-primary"
                                                     />
-                                                    <span class="text-xs text-gray-500">%</span>
+                                                    <span
+                                                        class="text-xs text-gray-500"
+                                                        >%</span
+                                                    >
                                                 </div>
                                             </div>
                                         {/if}
                                     {/each}
                                 </div>
                                 <div class="text-xs space-y-1">
-                                    <div class="flex justify-between text-gray-400">
+                                    <div
+                                        class="flex justify-between text-gray-400"
+                                    >
                                         <span>Total allocated:</span>
-                                        <span>{getPercentTotal().toFixed(2)}%</span>
+                                        <span
+                                            >{getPercentTotal().toFixed(
+                                                2,
+                                            )}%</span
+                                        >
                                     </div>
                                     <div
-                                        class="flex justify-between {Math.abs(getPercentRemaining()) < 0.01
+                                        class="flex justify-between {Math.abs(
+                                            getPercentRemaining(),
+                                        ) < 0.01
                                             ? 'text-green-400'
                                             : 'text-red-400'}"
                                     >
                                         <span>Remaining:</span>
-                                        <span>{getPercentRemaining().toFixed(2)}%</span>
+                                        <span
+                                            >{getPercentRemaining().toFixed(
+                                                2,
+                                            )}%</span
+                                        >
                                     </div>
                                 </div>
                             {:else}
@@ -2817,19 +3767,28 @@
                                         bind:checked={splitEvenly}
                                         class="w-4 h-4 text-primary bg-dark border-dark-100 rounded focus:ring-primary"
                                     />
-                                    <span class="text-sm text-gray-300">Split evenly</span>
+                                    <span class="text-sm text-gray-300"
+                                        >Split evenly</span
+                                    >
                                 </label>
                                 {#if splitEvenly}
                                     <p class="text-xs text-gray-400">
-                                        {selectedMembers.length} member(s) selected • {formatCurrency(
-                                            parseFloat(expenseAmount || "0") / selectedMembers.length,
+                                        {selectedMembers.length} member(s) selected
+                                        • {formatCurrency(
+                                            parseFloat(expenseAmount || "0") /
+                                                selectedMembers.length,
                                         )}
                                         {expenseCurrency} each
                                     </p>
                                 {:else}
                                     <div class="space-y-2 mb-2">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-xs font-medium text-gray-300">Custom amounts</span>
+                                        <div
+                                            class="flex justify-between items-center"
+                                        >
+                                            <span
+                                                class="text-xs font-medium text-gray-300"
+                                                >Custom amounts</span
+                                            >
                                             <button
                                                 type="button"
                                                 on:click={distributeEvenly}
@@ -2839,15 +3798,25 @@
                                             </button>
                                         </div>
                                         {#each selectedMembers as memberId}
-                                            {@const member = allMembers.find((m) => m.id === memberId)}
+                                            {@const member = allMembers.find(
+                                                (m) => m.id === memberId,
+                                            )}
                                             {#if member}
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-xs text-gray-400 flex-1">
+                                                <div
+                                                    class="flex items-center space-x-2"
+                                                >
+                                                    <span
+                                                        class="text-xs text-gray-400 flex-1"
+                                                    >
                                                         {getMemberName(member)}
                                                     </span>
                                                     <input
                                                         type="number"
-                                                        bind:value={customShares[memberId]}
+                                                        bind:value={
+                                                            customShares[
+                                                                memberId
+                                                            ]
+                                                        }
                                                         step="0.01"
                                                         min="0"
                                                         placeholder="0.00"
@@ -2858,17 +3827,31 @@
                                         {/each}
                                     </div>
                                     <div class="text-xs space-y-1">
-                                        <div class="flex justify-between text-gray-400">
+                                        <div
+                                            class="flex justify-between text-gray-400"
+                                        >
                                             <span>Total allocated:</span>
-                                            <span>{formatCurrency(getCustomSharesTotal())} {expenseCurrency}</span>
+                                            <span
+                                                >{formatCurrency(
+                                                    getCustomSharesTotal(),
+                                                )}
+                                                {expenseCurrency}</span
+                                            >
                                         </div>
                                         <div
-                                            class="flex justify-between {Math.abs(getCustomSharesRemaining()) < 0.01
+                                            class="flex justify-between {Math.abs(
+                                                getCustomSharesRemaining(),
+                                            ) < 0.01
                                                 ? 'text-green-400'
                                                 : 'text-red-400'}"
                                         >
                                             <span>Remaining:</span>
-                                            <span>{formatCurrency(getCustomSharesRemaining())} {expenseCurrency}</span>
+                                            <span
+                                                >{formatCurrency(
+                                                    getCustomSharesRemaining(),
+                                                )}
+                                                {expenseCurrency}</span
+                                            >
                                         </div>
                                     </div>
                                 {/if}
@@ -2880,12 +3863,15 @@
                 <!-- Receipt Image Display -->
                 {#if receiptImageUrl}
                     <div class="border border-dark-100 rounded-lg p-3">
-                        <h4 class="text-sm font-medium text-white mb-2">Receipt Image</h4>
+                        <h4 class="text-sm font-medium text-white mb-2">
+                            Receipt Image
+                        </h4>
                         <img
                             src={`/api/receipts/view/${encodeURIComponent(receiptImageUrl)}`}
                             alt="Receipt"
                             class="w-full rounded-lg cursor-pointer hover:opacity-90 transition"
-                            on:click={() => (showReceiptPreview = editingExpenseId)}
+                            on:click={() =>
+                                (showReceiptPreview = editingExpenseId)}
                         />
                     </div>
                 {/if}
@@ -2894,7 +3880,9 @@
                 {#if receiptItems.length > 0 && splitMode === "amounts"}
                     <div class="border border-dark-100 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-3">
-                            <h4 class="text-sm font-medium text-white">Receipt Items</h4>
+                            <h4 class="text-sm font-medium text-white">
+                                Receipt Items
+                            </h4>
                             <button
                                 type="button"
                                 on:click={addReceiptItem}
@@ -2904,10 +3892,24 @@
                             </button>
                         </div>
                         <!-- Column Headers - Hidden on mobile -->
-                        <div class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg">
-                            <div class="flex-1 text-xs font-medium text-gray-400">Name</div>
-                            <div class="w-16 text-xs font-medium text-gray-400 text-center">Qty</div>
-                            <div class="w-20 text-xs font-medium text-gray-400 text-center">Price</div>
+                        <div
+                            class="hidden md:flex gap-2 mb-2 px-3 py-2 bg-dark-300 rounded-lg"
+                        >
+                            <div
+                                class="flex-1 text-xs font-medium text-gray-400"
+                            >
+                                Name
+                            </div>
+                            <div
+                                class="w-16 text-xs font-medium text-gray-400 text-center"
+                            >
+                                Qty
+                            </div>
+                            <div
+                                class="w-20 text-xs font-medium text-gray-400 text-center"
+                            >
+                                Price
+                            </div>
                             <div class="w-6"></div>
                         </div>
                         <div class="space-y-3 max-h-64 overflow-y-auto">
@@ -2915,11 +3917,16 @@
                                 <div class="bg-dark-200 p-3 rounded-lg">
                                     <!-- Mobile Layout: Stacked -->
                                     <div class="md:hidden space-y-2">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-xs text-gray-400">Item {index + 1}</span>
+                                        <div
+                                            class="flex items-center justify-between mb-2"
+                                        >
+                                            <span class="text-xs text-gray-400"
+                                                >Item {index + 1}</span
+                                            >
                                             <button
                                                 type="button"
-                                                on:click={() => deleteReceiptItem(index)}
+                                                on:click={() =>
+                                                    deleteReceiptItem(index)}
                                                 class="text-red-400 hover:text-red-300 text-xs w-6 h-6 flex items-center justify-center"
                                             >
                                                 <svg
@@ -2938,7 +3945,10 @@
                                             </button>
                                         </div>
                                         <div>
-                                            <label class="text-xs text-gray-400 block mb-1">Name</label>
+                                            <label
+                                                class="text-xs text-gray-400 block mb-1"
+                                                >Name</label
+                                            >
                                             <input
                                                 type="text"
                                                 bind:value={item.description}
@@ -2949,7 +3959,10 @@
                                         </div>
                                         <div class="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label class="text-xs text-gray-400 block mb-1">Qty</label>
+                                                <label
+                                                    class="text-xs text-gray-400 block mb-1"
+                                                    >Qty</label
+                                                >
                                                 <input
                                                     type="number"
                                                     bind:value={item.quantity}
@@ -2960,7 +3973,10 @@
                                                 />
                                             </div>
                                             <div>
-                                                <label class="text-xs text-gray-400 block mb-1">Price</label>
+                                                <label
+                                                    class="text-xs text-gray-400 block mb-1"
+                                                    >Price</label
+                                                >
                                                 <input
                                                     type="number"
                                                     bind:value={item.price}
@@ -3002,10 +4018,16 @@
                                         />
                                         <button
                                             type="button"
-                                            on:click={() => deleteReceiptItem(index)}
+                                            on:click={() =>
+                                                deleteReceiptItem(index)}
                                             class="text-red-400 hover:text-red-300 text-xs"
                                         >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <path
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
@@ -3017,16 +4039,31 @@
                                     </div>
 
                                     <div class="flex flex-wrap gap-2 mt-2">
-                                        <span class="text-xs text-gray-400">Assign to:</span>
+                                        <span class="text-xs text-gray-400"
+                                            >Assign to:</span
+                                        >
                                         {#each allMembers as member}
-                                            <label class="flex items-center gap-1">
+                                            <label
+                                                class="flex items-center gap-1"
+                                            >
                                                 <input
                                                     type="checkbox"
-                                                    checked={item.assignedTo.includes(member.id)}
-                                                    on:change={() => toggleItemAssignment(index, member.id)}
+                                                    checked={item.assignedTo.includes(
+                                                        member.id,
+                                                    )}
+                                                    on:change={() =>
+                                                        toggleItemAssignment(
+                                                            index,
+                                                            member.id,
+                                                        )}
                                                     class="w-3 h-3 text-primary bg-dark border-dark-100 rounded"
                                                 />
-                                                <span class="text-xs text-gray-300">{getMemberName(member)}</span>
+                                                <span
+                                                    class="text-xs text-gray-300"
+                                                    >{getMemberName(
+                                                        member,
+                                                    )}</span
+                                                >
                                             </label>
                                         {/each}
                                     </div>
@@ -3034,7 +4071,8 @@
                             {/each}
                         </div>
                         <div class="mt-2 text-xs text-gray-400">
-                            Auto-calculated from items. Assignments update split shares.
+                            Auto-calculated from items. Assignments update split
+                            shares.
                         </div>
                     </div>
                 {/if}
@@ -3071,7 +4109,11 @@
         tabindex="0"
         on:keydown={(e) => e.key === "Escape" && (previewImageUrl = null)}
     >
-        <div class="max-w-4xl max-h-full" on:click|stopPropagation role="presentation">
+        <div
+            class="max-w-4xl max-h-full"
+            on:click|stopPropagation
+            role="presentation"
+        >
             <img
                 src={`/api/receipts/view/${encodeURIComponent(previewImageUrl)}`}
                 alt="Preview"
