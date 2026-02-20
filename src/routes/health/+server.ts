@@ -13,14 +13,12 @@ export const GET: RequestHandler = async () => {
         return json({
             status: "ok",
             timestamp: new Date().toISOString(),
-            database: "connected",
         });
     } catch (error) {
         return json(
             {
                 status: "error",
                 timestamp: new Date().toISOString(),
-                database: "disconnected",
                 error: error instanceof Error ? error.message : "Unknown error",
             },
             { status: 503 },
