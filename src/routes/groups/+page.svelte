@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
+    import { goto, invalidateAll } from "$app/navigation";
     import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import RightSidebar from "$lib/components/RightSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
+    import type { PageData } from "./$types";
 
     interface Group {
         id: number;
@@ -20,8 +21,10 @@
         imageUrl?: string | null;
     }
 
+    const { data } = $props<{ data: PageData }>();
+
     let groups = $state<Group[]>([]);
-    let loading = $state(true);
+    let loading = $state(false);
     let showCreateModal = $state(false);
     let showArchivedGroups = $state(false);
     let newGroupName = $state("");
@@ -31,36 +34,18 @@
     let supportedCurrencies = $state<string[]>([]);
 
     $effect(() => {
-        if (!$user) {
-            goto(resolve("/login"));
-            return;
-        }
-        void loadCurrencies();
+        groups = data.groups ?? [];
+        supportedCurrencies = data.supportedCurrencies ?? [];
+        showArchivedGroups = data.includeArchived ?? false;
+        error = data.error ?? "";
+        loading = false;
     });
 
-    $effect(() => {
-        if (!$user) return;
-        showArchivedGroups;
-        void loadGroups();
-    });
-
-    async function loadCurrencies() {
-        try {
-            const response = await api.groups.currencies();
-            supportedCurrencies = response.currencies;
-        } catch (e) {
-            console.error("Failed to load currencies:", e);
-        }
-    }
-
-    async function loadGroups() {
-        try {
-            groups = await api.groups.list(showArchivedGroups);
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to load groups";
-        } finally {
-            loading = false;
-        }
+    async function updateArchivedFilter(checked: boolean) {
+        showArchivedGroups = checked;
+        loading = true;
+        const query = checked ? "?includeArchived=true" : "";
+        await goto(resolve(`/groups${query}`), { replaceState: true, noScroll: true });
     }
 
     async function createGroup() {
@@ -76,7 +61,8 @@
             newGroupDescription = "";
             newGroupCurrency = "EUR";
             showCreateModal = false;
-            loadGroups();
+            loading = true;
+            await invalidateAll();
         } catch (e) {
             error = e instanceof Error ? e.message : "Failed to create group";
         }
@@ -141,6 +127,7 @@
                         type="checkbox"
                         id="showArchived"
                         bind:checked={showArchivedGroups}
+                        onchange={(event) => updateArchivedFilter((event.currentTarget as HTMLInputElement).checked)}
                         class="w-4 h-4 bg-dark-200 border border-dark-100 rounded text-primary focus:ring-primary"
                     />
                     <label for="showArchived" class="text-sm text-gray-300 cursor-pointer">
@@ -160,7 +147,7 @@
                 {:else}
                     <div class="grid gap-6">
                         <div class="grid gap-4 md:grid-cols-2">
-                            {#each groups as group}
+                            {#each groups as group (group.uuid)}
                                 <a
                                     href={resolve(`/groups/${group.uuid}`)}
                                     class="block bg-dark-300/70 p-5 rounded-2xl hover:border-primary/50 transition border border-dark-100/70 {group.archived
@@ -171,7 +158,7 @@
                                         {#if group.imageUrl}
                                             <img
                                                 src={`/api/receipts/view/${encodeURIComponent(group.imageUrl)}`}
-                                                alt="Group image"
+                                                alt="Group"
                                                 class="h-12 w-12 rounded-2xl object-cover border border-dark-100"
                                             />
                                         {:else}

@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
     import { resolve } from "$app/paths";
-    import { user } from "$lib/stores/auth";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
+    import type { PageData } from "./$types";
 
     interface ActivityItem {
         id: number;
@@ -18,38 +17,17 @@
         dateLabel: string;
     }
 
+    const { data } = $props<{ data: PageData }>();
+
     let activities = $state<ActivityItem[]>([]);
-    let loading = $state(true);
+    let loading = $state(false);
     let error = $state("");
 
     $effect(() => {
-        if (!$user) {
-            goto(resolve("/login"));
-            return;
-        }
-        void loadActivity();
+        activities = data.activities ?? [];
+        error = data.error ?? "";
+        loading = false;
     });
-
-    async function loadActivity() {
-        loading = true;
-        try {
-            const response = await fetch("/api/activity?limit=120", {
-                credentials: "include",
-            });
-
-            if (!response.ok) {
-                const errorResponse = await response.json();
-                throw new Error(errorResponse.error || "Request failed");
-            }
-
-            const data = await response.json();
-            activities = data.activities || [];
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to load activity";
-        } finally {
-            loading = false;
-        }
-    }
 
     function iconFor(type: string) {
         if (type.startsWith("settlement")) return "settlement";
@@ -102,7 +80,7 @@
                         </div>
                     {:else}
                         <div class="divide-y divide-dark-100/80">
-                            {#each activities as activity}
+                            {#each activities as activity (activity.id)}
                                 {#if activity.groupUuid}
                                     <a
                                         href={resolve(`/groups/${activity.groupUuid}`)}

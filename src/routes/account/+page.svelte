@@ -1,11 +1,13 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
     import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
+    import type { PageData } from "./$types";
 
-    let loading = $state(true);
+    const { data } = $props<{ data: PageData }>();
+
+    let loading = $state(false);
     let savingProfile = $state(false);
     let savingPassword = $state(false);
     let uploadingAvatar = $state(false);
@@ -27,26 +29,15 @@
     });
 
     $effect(() => {
-        if (!$user) {
-            goto(resolve("/login"));
-            return;
+        if (data.user) {
+            name = data.user.name;
+            email = data.user.email;
+            avatarUrl = data.user.avatarUrl || null;
+            user.set(data.user);
         }
-        void loadAccount();
+        error = data.error ?? "";
+        loading = false;
     });
-
-    async function loadAccount() {
-        try {
-            const response = await fetchAccount("/account");
-            name = response.user.name;
-            email = response.user.email;
-            avatarUrl = response.user.avatarUrl || null;
-            user.set(response.user);
-        } catch (e) {
-            error = e instanceof Error ? e.message : "Failed to load account";
-        } finally {
-            loading = false;
-        }
-    }
 
     async function saveProfile() {
         error = "";
@@ -242,16 +233,18 @@
 
                                     <div class="mt-6 grid gap-5 md:grid-cols-2">
                                         <div>
-                                            <label class="text-sm text-gray-300">Name</label>
+                                            <label for="profileName" class="text-sm text-gray-300">Name</label>
                                             <input
+                                                id="profileName"
                                                 type="text"
                                                 bind:value={name}
                                                 class="mt-2 w-full rounded-xl border border-dark-100 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none"
                                             />
                                         </div>
                                         <div>
-                                            <label class="text-sm text-gray-300">Email address</label>
+                                            <label for="profileEmail" class="text-sm text-gray-300">Email address</label>
                                             <input
+                                                id="profileEmail"
                                                 type="email"
                                                 value={email}
                                                 disabled
@@ -283,24 +276,27 @@
 
                                     <div class="mt-6 grid gap-4 md:grid-cols-3">
                                         <div>
-                                            <label class="text-sm text-gray-300">Current password</label>
+                                            <label for="currentPassword" class="text-sm text-gray-300">Current password</label>
                                             <input
+                                                id="currentPassword"
                                                 type="password"
                                                 bind:value={currentPassword}
                                                 class="mt-2 w-full rounded-xl border border-dark-100 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none"
                                             />
                                         </div>
                                         <div>
-                                            <label class="text-sm text-gray-300">New password</label>
+                                            <label for="newPassword" class="text-sm text-gray-300">New password</label>
                                             <input
+                                                id="newPassword"
                                                 type="password"
                                                 bind:value={newPassword}
                                                 class="mt-2 w-full rounded-xl border border-dark-100 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none"
                                             />
                                         </div>
                                         <div>
-                                            <label class="text-sm text-gray-300">Confirm new password</label>
+                                            <label for="confirmPassword" class="text-sm text-gray-300">Confirm new password</label>
                                             <input
+                                                id="confirmPassword"
                                                 type="password"
                                                 bind:value={confirmPassword}
                                                 class="mt-2 w-full rounded-xl border border-dark-100 bg-dark-200 px-4 py-2 text-white focus:border-primary focus:outline-none"

@@ -21,7 +21,14 @@
         PendingInvitation,
         Settlement,
     } from "$lib/components/groups/group-context";
+    import type { Snippet } from "svelte";
     import { writable } from "svelte/store";
+    import type { LayoutData } from "./$types";
+
+    const { data, children = (() => {}) as Snippet } = $props<{
+        data: LayoutData;
+        children?: Snippet;
+    }>();
 
     const groupUuid = $derived(page.params.id ?? "");
 
@@ -66,19 +73,23 @@
     });
 
     $effect(() => {
-        if (!$user) {
-            goto(resolve("/login"));
-            return;
-        }
-
-        groupUuid;
-        void refresh();
+        group.set(data.group ?? null);
+        allMembers.set(data.allMembers ?? []);
+        pendingInvitations.set(data.pendingInvitations ?? []);
+        expenses.set(data.expenses ?? []);
+        balances.set(data.balances ?? []);
+        settlements.set(data.settlements ?? []);
+        supportedCurrencies.set(data.supportedCurrencies ?? []);
+        groupId.set(data.group?.id ?? null);
+        error.set(data.error ?? "");
+        loading.set(false);
     });
 
     async function refresh() {
         loading.set(true);
         try {
-            const data = await fetchGroupData(groupUuid);
+            const currentGroupUuid = page.params.id ?? "";
+            const data = await fetchGroupData(currentGroupUuid);
             group.set(data.group);
             allMembers.set(data.allMembers);
             pendingInvitations.set(data.pendingInvitations);
@@ -145,5 +156,5 @@
     {formatCurrency}
     exportExpenses={() => exportExpenses(groupUuid)}
 >
-    <slot />
+    {@render children()}
 </GroupShell>
