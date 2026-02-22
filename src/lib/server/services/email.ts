@@ -239,16 +239,6 @@ class EmailService {
                 <span class="group-name">${groupName}</span> on Spendbee.
             </p>
 
-            <div class="highlight-box">
-                <p style="margin: 0;">
-                    <strong>📝 First, you'll need to create an account</strong>
-                </p>
-                <p style="margin: 10px 0 0 0; color: #d1d5db;">
-                    Don't worry, it only takes a minute! After creating your account,
-                    you'll automatically join the group and can start tracking expenses together.
-                </p>
-            </div>
-
             <p>
                 Spendbee helps you track shared expenses and manage group finances effortlessly.
                 Perfect for roommates, trips, couples, and any shared expenses!

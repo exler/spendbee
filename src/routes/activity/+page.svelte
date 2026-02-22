@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
@@ -18,16 +18,16 @@
         dateLabel: string;
     }
 
-    let activities: ActivityItem[] = [];
-    let loading = true;
-    let error = "";
+    let activities = $state<ActivityItem[]>([]);
+    let loading = $state(true);
+    let error = $state("");
 
-    onMount(() => {
+    $effect(() => {
         if (!$user) {
-            goto("/login");
+            goto(resolve("/login"));
             return;
         }
-        loadActivity();
+        void loadActivity();
     });
 
     async function loadActivity() {
@@ -75,7 +75,7 @@
             <main class="flex-1">
                 <MobileNavbar backHref="/groups" backLabel="Back to dashboard" />
                 <div class="hidden lg:flex pt-6 mb-6 items-center justify-between">
-                    <a href="/groups" class="inline-flex items-center gap-3 hover:opacity-80 transition">
+                    <a href={resolve("/groups")} class="inline-flex items-center gap-3 hover:opacity-80 transition">
                         <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-10 h-10" />
                         <span class="text-2xl font-semibold">Spendbee</span>
                     </a>
@@ -105,7 +105,7 @@
                             {#each activities as activity}
                                 {#if activity.groupUuid}
                                     <a
-                                        href={`/groups/${activity.groupUuid}`}
+                                        href={resolve(`/groups/${activity.groupUuid}`)}
                                         class="flex gap-4 px-6 py-4 transition hover:bg-dark-200/40"
                                     >
                                         <div class="pt-1">

@@ -1,25 +1,19 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { page } from "$app/stores";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
-    import { onMount } from "svelte";
     import { inviteOnly } from "$lib/settings";
 
-    let email = "";
-    let password = "";
-    let name = "";
-    let error = "";
-    let loading = false;
-    let token = "";
-    let invitationRequired = false;
+    let email = $state("");
+    let password = $state("");
+    let name = $state("");
+    let error = $state("");
+    let loading = $state(false);
 
-    onMount(() => {
-        // Get token from URL query parameter
-        token = $page.url.searchParams.get("token") || "";
-        // If no token, registration requires invitation
-        invitationRequired = inviteOnly && !token;
-    });
+    const token = $derived($page.url.searchParams.get("token") ?? "");
+    const invitationRequired = $derived(inviteOnly && !token);
 
     async function handleRegister() {
         error = "";
@@ -36,9 +30,9 @@
 
             // If there's a group UUID, redirect to it, otherwise go to groups list
             if (response.groupUuid) {
-                goto(`/groups/${response.groupUuid}`);
+                goto(resolve(`/groups/${response.groupUuid}`));
             } else {
-                goto("/groups");
+                goto(resolve("/groups"));
             }
         } catch (e) {
             error = e instanceof Error ? e.message : "Registration failed";
@@ -55,7 +49,7 @@
 <div class="min-h-screen flex items-center justify-center p-4 bg-dark-500">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
-            <a href="/" class="inline-block">
+            <a href={resolve("/")} class="inline-block">
                 <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
             </a>
             <h2 class="text-3xl font-semibold text-white mt-4">
@@ -84,12 +78,15 @@
 
                 <p class="text-center text-gray-400 mt-6">
                     Already have an account?
-                    <a href="/login" class="text-primary hover:text-primary-400">Login</a>
+                    <a href={resolve("/login")} class="text-primary hover:text-primary-400">Login</a>
                 </p>
             </div>
         {:else}
             <form
-                on:submit|preventDefault={handleRegister}
+                onsubmit={(event) => {
+                    event.preventDefault();
+                    handleRegister();
+                }}
                 class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100"
             >
                 {#if error}
@@ -158,7 +155,7 @@
 
                 <p class="text-center text-gray-400">
                     Already have an account?
-                    <a href="/login" class="text-primary hover:text-primary-400">Login</a>
+                    <a href={resolve("/login")} class="text-primary hover:text-primary-400">Login</a>
                 </p>
             </form>
         {/if}

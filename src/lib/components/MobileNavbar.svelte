@@ -92,7 +92,7 @@
             {#if showNotifications}
                 <div class="relative">
                     <button
-                        on:click={() => (showNotificationsPanel = !showNotificationsPanel)}
+                        onclick={() => (showNotificationsPanel = !showNotificationsPanel)}
                         class="relative px-3 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition"
                         aria-label="Notifications"
                     >
@@ -129,7 +129,7 @@
                                                 <h4 class="font-semibold text-white">{notification.title}</h4>
                                                 {#if !notification.read}
                                                     <button
-                                                        on:click={() => markAsRead(notification.id)}
+                                                        onclick={() => markAsRead(notification.id)}
                                                         class="text-xs text-primary hover:text-primary-400"
                                                     >
                                                         Mark read
@@ -142,13 +142,13 @@
                                             {#if notification.type === "group_invite"}
                                                 <div class="flex gap-2">
                                                     <button
-                                                        on:click={() => acceptInvitation(notification.id)}
+                                                        onclick={() => acceptInvitation(notification.id)}
                                                         class="flex-1 bg-primary text-dark py-1 px-3 rounded text-sm font-semibold hover:bg-primary-400 transition"
                                                     >
                                                         Accept
                                                     </button>
                                                     <button
-                                                        on:click={() => declineInvitation(notification.id)}
+                                                        onclick={() => declineInvitation(notification.id)}
                                                         class="flex-1 bg-dark-100 text-white py-1 px-3 rounded text-sm hover:bg-dark transition"
                                                     >
                                                         Decline
@@ -181,7 +181,7 @@
 
             {#if showLogout}
                 <button
-                    on:click={handleLogout}
+                    onclick={handleLogout}
                     class="px-3 py-2 bg-dark-200 text-white rounded-lg hover:bg-dark-100 transition text-sm"
                 >
                     Logout

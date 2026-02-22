@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
@@ -20,23 +20,28 @@
         imageUrl?: string | null;
     }
 
-    let groups: Group[] = [];
-    let loading = true;
-    let showCreateModal = false;
-    let showArchivedGroups = false;
-    let newGroupName = "";
-    let newGroupDescription = "";
-    let newGroupCurrency = "EUR";
-    let error = "";
-    let supportedCurrencies: string[] = [];
+    let groups = $state<Group[]>([]);
+    let loading = $state(true);
+    let showCreateModal = $state(false);
+    let showArchivedGroups = $state(false);
+    let newGroupName = $state("");
+    let newGroupDescription = $state("");
+    let newGroupCurrency = $state("EUR");
+    let error = $state("");
+    let supportedCurrencies = $state<string[]>([]);
 
-    onMount(() => {
+    $effect(() => {
         if (!$user) {
-            goto("/login");
+            goto(resolve("/login"));
             return;
         }
-        loadGroups();
-        loadCurrencies();
+        void loadCurrencies();
+    });
+
+    $effect(() => {
+        if (!$user) return;
+        showArchivedGroups;
+        void loadGroups();
     });
 
     async function loadCurrencies() {
@@ -56,10 +61,6 @@
         } finally {
             loading = false;
         }
-    }
-
-    $: if (showArchivedGroups !== undefined) {
-        loadGroups();
     }
 
     async function createGroup() {
@@ -93,7 +94,7 @@
                 <div class="rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
                     <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Quick actions</div>
                     <button
-                        on:click={() => (showCreateModal = true)}
+                        onclick={() => (showCreateModal = true)}
                         class="mt-4 w-full rounded-lg bg-primary text-dark py-2 text-sm font-semibold hover:bg-primary-400"
                     >
                         Create group
@@ -114,13 +115,13 @@
                         </div>
                         <div class="flex w-full flex-wrap items-center gap-3">
                             <a
-                                href="/activity"
+                                href={resolve("/activity")}
                                 class="flex-1 bg-dark-200 text-white py-3 px-6 rounded-xl font-semibold hover:bg-dark-100 transition text-center"
                             >
                                 View Activity
                             </a>
                             <button
-                                on:click={() => (showCreateModal = true)}
+                                onclick={() => (showCreateModal = true)}
                                 class="flex-1 bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition"
                             >
                                 Create Group
@@ -161,7 +162,7 @@
                         <div class="grid gap-4 md:grid-cols-2">
                             {#each groups as group}
                                 <a
-                                    href="/groups/{group.uuid}"
+                                    href={resolve(`/groups/${group.uuid}`)}
                                     class="block bg-dark-300/70 p-5 rounded-2xl hover:border-primary/50 transition border border-dark-100/70 {group.archived
                                         ? 'opacity-60'
                                         : ''}"
@@ -235,7 +236,13 @@
     <div class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
         <div class="bg-dark-300 p-6 rounded-lg max-w-md w-full">
             <h3 class="text-2xl font-bold text-white mb-4">Create Group</h3>
-            <form on:submit|preventDefault={createGroup} class="space-y-4">
+            <form
+                onsubmit={(event) => {
+                    event.preventDefault();
+                    createGroup();
+                }}
+                class="space-y-4"
+            >
                 <div>
                     <label for="groupName" class="block text-sm font-medium text-gray-300 mb-2"> Group Name </label>
                     <input
@@ -282,7 +289,7 @@
                     </button>
                     <button
                         type="button"
-                        on:click={() => (showCreateModal = false)}
+                        onclick={() => (showCreateModal = false)}
                         class="flex-1 bg-dark-200 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-100 transition"
                     >
                         Cancel

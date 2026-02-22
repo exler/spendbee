@@ -1,10 +1,6 @@
 # Spendbee AGENTS.md
 
-A modern bill-splitting and expense tracking PWA built with SvelteKit and Bun.
-
-## Overview
-
-Spendbee helps you track bills and expenses with friends. Create groups, add expenses, and see who owes what at a glance. The app features a clean, mobile-first design with a distinctive yellow-black color scheme.
+Spendbee is a modern bill-splitting and expense tracking PWA. Create groups, add expenses, and see who owes what at a glance. The app features a clean, mobile-first design with a distinctive yellow-black color scheme.
 
 ## Architecture
 
@@ -119,7 +115,7 @@ bun --bun run build
 
 # Database migrations
 bun run db:generate  # Generate migrations
-bun run db:migrate   # Run migrations
+bun run migrate.ts
 ```
 
 ## Environment
@@ -128,6 +124,5 @@ bun run db:migrate   # Run migrations
 
 ## Guidelines
 
-* Update the AGENTS.md whenever it feels appropriate.
 * Do not create new documentation files unless explicitly asked to.
 * Migrations should be named with a sequential number and a short description, e.g., `0005_currency_exchange_rates.sql`.

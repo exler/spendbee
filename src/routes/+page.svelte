@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
 
-    onMount(() => {
+    $effect(() => {
         if ($user) {
-            goto("/groups");
+            goto(resolve("/groups"));
         }
     });
 </script>
@@ -31,13 +31,13 @@
                 </p>
                 <div class="mt-6 grid gap-3 sm:grid-cols-2">
                     <a
-                        href="/login"
+                        href={resolve("/login")}
                         class="block w-full bg-primary text-dark py-3 px-6 rounded-xl font-semibold hover:bg-primary-400 transition text-center"
                     >
                         Login
                     </a>
                     <a
-                        href="/register"
+                        href={resolve("/register")}
                         class="block w-full bg-dark-200 text-white py-3 px-6 rounded-xl font-semibold hover:bg-dark-100 transition border border-primary text-center"
                     >
                         Register

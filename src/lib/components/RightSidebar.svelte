@@ -70,13 +70,13 @@
                             {#if notification.type === "group_invite"}
                                 <div class="mt-3 flex gap-2">
                                     <button
-                                        on:click={() => acceptInvitation(notification.id)}
+                                        onclick={() => acceptInvitation(notification.id)}
                                         class="flex-1 bg-primary text-dark py-1 px-3 rounded text-xs font-semibold hover:bg-primary-400 transition"
                                     >
                                         Accept
                                     </button>
                                     <button
-                                        on:click={() => declineInvitation(notification.id)}
+                                        onclick={() => declineInvitation(notification.id)}
                                         class="flex-1 bg-dark-100 text-white py-1 px-3 rounded text-xs hover:bg-dark transition"
                                     >
                                         Decline
@@ -90,7 +90,7 @@
             {#if remainingNotifications.length > 0}
                 <div class="mt-4 border-t border-dark-100/70 pt-3">
                     <button
-                        on:click={() => (showAllNotifications = !showAllNotifications)}
+                        onclick={() => (showAllNotifications = !showAllNotifications)}
                         class="w-full text-xs uppercase tracking-[0.3em] text-gray-500 hover:text-gray-300 transition"
                     >
                         {showAllNotifications
@@ -112,13 +112,13 @@
                                         {#if notification.type === "group_invite"}
                                             <div class="mt-3 flex gap-2">
                                                 <button
-                                                    on:click={() => acceptInvitation(notification.id)}
+                                                    onclick={() => acceptInvitation(notification.id)}
                                                     class="flex-1 bg-primary text-dark py-1 px-3 rounded text-xs font-semibold hover:bg-primary-400 transition"
                                                 >
                                                     Accept
                                                 </button>
                                                 <button
-                                                    on:click={() => declineInvitation(notification.id)}
+                                                    onclick={() => declineInvitation(notification.id)}
                                                     class="flex-1 bg-dark-100 text-white py-1 px-3 rounded text-xs hover:bg-dark transition"
                                                 >
                                                     Decline

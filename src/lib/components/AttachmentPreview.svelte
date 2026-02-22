@@ -48,7 +48,7 @@
             {#if isImage(attachment.type)}
                 <button
                     type="button"
-                    on:click={() => handleImageClick(attachment)}
+                    onclick={() => handleImageClick(attachment)}
                     class="w-16 h-16 rounded-lg overflow-hidden bg-dark-300 cursor-pointer hover:opacity-80 transition border border-dark-100"
                 >
                     <img
@@ -73,11 +73,17 @@
             {#if showRemove}
                 <button
                     type="button"
-                    on:click={() => handleRemove(index)}
+                    title="Remove attachment"
+                    onclick={() => handleRemove(index)}
                     class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
                 >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
                     </svg>
                 </button>
             {/if}

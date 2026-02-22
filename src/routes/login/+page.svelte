@@ -1,14 +1,15 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { page } from "$app/stores";
     import { user } from "$lib/stores/auth";
     import { api } from "$lib/api";
     import { inviteOnly } from "$lib/settings";
 
-    let email = "";
-    let password = "";
-    let error = "";
-    let loading = false;
+    let email = $state("");
+    let password = $state("");
+    let error = $state("");
+    let loading = $state(false);
 
     async function handleLogin() {
         error = "";
@@ -21,9 +22,9 @@
             // Check if there's a redirect URL (e.g., from invitation email)
             const redirectUrl = $page.url.searchParams.get("redirect");
             if (redirectUrl) {
-                goto(redirectUrl);
+                goto(resolve(redirectUrl));
             } else {
-                goto("/groups");
+                goto(resolve("/groups"));
             }
         } catch (e) {
             error = e instanceof Error ? e.message : "Login failed";
@@ -40,7 +41,7 @@
 <div class="min-h-screen flex items-center justify-center p-4 bg-dark-500">
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
-            <a href="/" class="inline-block">
+            <a href={resolve("/")} class="inline-block">
                 <img src="/android-chrome-512x512.png" alt="Spendbee Logo" class="w-28 h-28 mx-auto" />
             </a>
             <h2 class="text-3xl font-semibold text-white mt-4">Welcome back</h2>
@@ -48,7 +49,10 @@
         </div>
 
         <form
-            on:submit|preventDefault={handleLogin}
+            onsubmit={(event) => {
+                event.preventDefault();
+                handleLogin();
+            }}
             class="bg-dark-300 p-6 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.35)] space-y-4 border border-dark-100"
         >
             {#if error}

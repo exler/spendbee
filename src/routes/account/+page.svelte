@@ -1,31 +1,40 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
     import { user } from "$lib/stores/auth";
     import LeftSidebar from "$lib/components/LeftSidebar.svelte";
     import MobileNavbar from "$lib/components/MobileNavbar.svelte";
 
-    let loading = true;
-    let savingProfile = false;
-    let savingPassword = false;
-    let uploadingAvatar = false;
-    let error = "";
-    let success = "";
+    let loading = $state(true);
+    let savingProfile = $state(false);
+    let savingPassword = $state(false);
+    let uploadingAvatar = $state(false);
+    let error = $state("");
+    let success = $state("");
 
-    let name = "";
-    let email = "";
-    let avatarUrl: string | null = null;
+    let name = $state("");
+    let email = $state("");
+    let avatarUrl = $state<string | null>(null);
 
-    let currentPassword = "";
-    let newPassword = "";
-    let confirmPassword = "";
+    let currentPassword = $state("");
+    let newPassword = $state("");
+    let confirmPassword = $state("");
 
-    onMount(async () => {
+    const avatarPreview = $derived.by(() => {
+        if (!avatarUrl) return null;
+        if (avatarUrl.startsWith("http")) return avatarUrl;
+        return `/api/receipts/view/${encodeURIComponent(avatarUrl)}`;
+    });
+
+    $effect(() => {
         if (!$user) {
-            goto("/login");
+            goto(resolve("/login"));
             return;
         }
+        void loadAccount();
+    });
 
+    async function loadAccount() {
         try {
             const response = await fetchAccount("/account");
             name = response.user.name;
@@ -37,12 +46,6 @@
         } finally {
             loading = false;
         }
-    });
-
-    function avatarPreview() {
-        if (!avatarUrl) return null;
-        if (avatarUrl.startsWith("http")) return avatarUrl;
-        return `/api/receipts/view/${encodeURIComponent(avatarUrl)}`;
     }
 
     async function saveProfile() {
@@ -169,7 +172,7 @@
                             <h1 class="text-3xl font-semibold">Your account</h1>
                         </div>
                         <a
-                            href="/groups"
+                            href={resolve("/groups")}
                             class="inline-flex items-center gap-2 rounded-xl border border-dark-100/70 bg-dark-300/60 px-4 py-2 text-sm text-gray-200 hover:bg-dark-200/70"
                         >
                             Back to dashboard
@@ -196,9 +199,9 @@
                                 <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Profile</div>
                                 <div class="mt-4 flex flex-col items-center text-center">
                                     <div class="relative">
-                                        {#if avatarPreview()}
+                                        {#if avatarPreview}
                                             <img
-                                                src={avatarPreview()}
+                                                src={avatarPreview}
                                                 alt="Account avatar"
                                                 class="h-40 w-40 rounded-3xl object-cover border border-dark-100"
                                             />
@@ -217,7 +220,7 @@
                                                 type="file"
                                                 accept="image/*"
                                                 class="hidden"
-                                                on:change={handleAvatarChange}
+                                                onchange={handleAvatarChange}
                                                 disabled={uploadingAvatar}
                                             />
                                         </label>
@@ -262,7 +265,7 @@
 
                                     <div class="mt-6 flex justify-end">
                                         <button
-                                            on:click={saveProfile}
+                                            onclick={saveProfile}
                                             disabled={savingProfile}
                                             class="rounded-xl bg-primary px-6 py-2 font-semibold text-dark hover:bg-primary-400 disabled:opacity-60"
                                         >
@@ -307,7 +310,7 @@
 
                                     <div class="mt-6 flex justify-end">
                                         <button
-                                            on:click={changePassword}
+                                            onclick={changePassword}
                                             disabled={savingPassword}
                                             class="rounded-xl bg-primary px-6 py-2 font-semibold text-dark hover:bg-primary-400 disabled:opacity-60"
                                         >
