@@ -22,7 +22,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
 export const api = {
     auth: {
-        register: (data: { email: string; password: string; name: string; token?: string }) =>
+        register: (data: { email: string; password: string; name: string; token?: string; shareCode?: string }) =>
             fetchAPI("/auth/register", {
                 method: "POST",
                 body: JSON.stringify(data),
@@ -77,6 +77,18 @@ export const api = {
                 body: JSON.stringify({ baseCurrency }),
             }),
         currencies: () => fetchAPI("/groups/currencies"),
+        shareLink: {
+            get: (uuid: string) => fetchAPI(`/groups/${uuid}/share-link`),
+            create: (uuid: string, regenerate?: boolean) =>
+                fetchAPI(`/groups/${uuid}/share-link`, {
+                    method: "POST",
+                    body: JSON.stringify({ regenerate: Boolean(regenerate) }),
+                }),
+            disable: (uuid: string) =>
+                fetchAPI(`/groups/${uuid}/share-link`, {
+                    method: "DELETE",
+                }),
+        },
     },
     notifications: {
         list: () => fetchAPI("/notifications"),

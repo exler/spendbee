@@ -1,8 +1,10 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import { browser } from "$app/environment";
     import { api } from "$lib/api";
     import GroupMembersSection from "$lib/components/groups/GroupMembersSection.svelte";
     import { getGroupLayoutContext } from "$lib/components/groups/group-layout-context";
+    import { user } from "$lib/stores/auth";
 
     const {
         groupUuid,
@@ -22,6 +24,18 @@
     let showInviteMember = $state(false);
     let newGuestMemberName = $state("");
     let inviteEmail = $state("");
+    let shareLoading = $state(false);
+    let shareError = $state("");
+    let shareStatus = $state("");
+    let shareInfo = $state<{ enabled: boolean; code: string | null }>({
+        enabled: false,
+        code: null,
+    });
+
+    const isOwner = $derived($group?.createdBy === $user?.id);
+    const shareUrl = $derived(
+        browser && shareInfo.code ? `${window.location.origin}/join/${shareInfo.code}` : "",
+    );
 
     $effect(() => {
         if (page.state?.openInviteMember) {
@@ -30,6 +44,11 @@
         if (page.state?.openAddGuestMember) {
             showAddGuestMember = true;
         }
+    });
+
+    $effect(() => {
+        if (!isOwner) return;
+        void loadShareLink();
     });
 
     async function addGuestMember() {
@@ -94,11 +113,149 @@
                 e instanceof Error ? e.message : "Failed to revoke invitation";
         }
     }
+
+    async function loadShareLink() {
+        shareError = "";
+        try {
+            const response = await api.groups.shareLink.get(groupUuid);
+            shareInfo = response;
+        } catch (e) {
+            shareError = e instanceof Error ? e.message : "Failed to load share link";
+        }
+    }
+
+    async function handleGenerateLink(regenerate = false) {
+        shareLoading = true;
+        shareError = "";
+        shareStatus = "";
+        try {
+            const response = await api.groups.shareLink.create(groupUuid, regenerate);
+            shareInfo = response;
+            shareStatus = "Share link is ready";
+        } catch (e) {
+            shareError = e instanceof Error ? e.message : "Failed to generate share link";
+        } finally {
+            shareLoading = false;
+        }
+    }
+
+    async function handleDisableLink() {
+        shareLoading = true;
+        shareError = "";
+        shareStatus = "";
+        try {
+            const response = await api.groups.shareLink.disable(groupUuid);
+            shareInfo = response;
+            shareStatus = "Share link disabled";
+        } catch (e) {
+            shareError = e instanceof Error ? e.message : "Failed to disable share link";
+        } finally {
+            shareLoading = false;
+        }
+    }
+
+    async function handleCopy() {
+        if (!browser || !shareUrl) return;
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            shareStatus = "Link copied to clipboard";
+            setTimeout(() => {
+                shareStatus = "";
+            }, 2000);
+        } catch (e) {
+            shareError = e instanceof Error ? e.message : "Failed to copy link";
+        }
+    }
 </script>
 
 <svelte:head>
     <title>{$group?.name || "Group"} - Spendbee</title>
 </svelte:head>
+
+{#if isOwner}
+    <div class="bg-dark-300 p-6 rounded-2xl border border-dark-100 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Share Link</h2>
+                <p class="text-sm text-gray-400 mt-1">
+                    Generate a link to invite people to this group. The link stays active until you disable it.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {#if shareInfo.enabled && shareInfo.code}
+                    <button
+                        type="button"
+                        onclick={() => handleGenerateLink(true)}
+                        disabled={shareLoading}
+                        class="rounded-xl border border-dark-100 bg-dark-200/80 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-dark-100 transition disabled:opacity-50"
+                    >
+                        Regenerate
+                    </button>
+                    <button
+                        type="button"
+                        onclick={handleDisableLink}
+                        disabled={shareLoading}
+                        class="rounded-xl bg-red-500/80 px-4 py-2 text-sm font-semibold text-dark hover:bg-red-400 transition disabled:opacity-50"
+                    >
+                        Disable
+                    </button>
+                {:else}
+                    <button
+                        type="button"
+                        onclick={() => handleGenerateLink(false)}
+                        disabled={shareLoading}
+                        class="rounded-xl bg-primary text-dark px-4 py-2 text-sm font-semibold hover:bg-primary-400 transition disabled:opacity-50"
+                    >
+                        Generate Link
+                    </button>
+                {/if}
+            </div>
+        </div>
+
+        {#if shareError}
+            <div class="bg-red-900/50 border border-red-500 text-red-200 p-3 rounded mt-4">
+                {shareError}
+            </div>
+        {/if}
+
+        {#if shareStatus}
+            <div class="bg-green-900/40 border border-green-500 text-green-200 p-3 rounded mt-4">
+                {shareStatus}
+            </div>
+        {/if}
+
+        <div class="mt-6">
+            {#if shareInfo.enabled && shareInfo.code}
+                <label for="shareLinkUrl" class="block text-sm font-medium text-gray-300 mb-2">
+                    Shareable URL
+                </label>
+                <div class="flex flex-wrap gap-3">
+                    <input
+                        id="shareLinkUrl"
+                        type="text"
+                        readonly
+                        value={shareUrl}
+                        class="flex-1 min-w-[220px] px-4 py-2 bg-dark-200 border border-dark-100 rounded-lg text-gray-200"
+                    />
+                    <button
+                        type="button"
+                        onclick={handleCopy}
+                        class="rounded-xl border border-dark-100 bg-dark-200/80 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-dark-100 transition"
+                    >
+                        Copy Link
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    Anyone with this link can join. Disable it anytime to stop new members from joining.
+                </p>
+            {:else}
+                <div class="bg-dark-200/70 border border-dark-100 text-gray-300 p-4 rounded-lg text-sm">
+                    No active share link. Generate one to invite people with a single URL.
+                </div>
+            {/if}
+        </div>
+    </div>
+{/if}
 
 <GroupMembersSection
     pendingInvitations={$pendingInvitations}

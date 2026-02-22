@@ -13,7 +13,8 @@
     let loading = $state(false);
 
     const token = $derived($page.url.searchParams.get("token") ?? "");
-    const invitationRequired = $derived(inviteOnly && !token);
+    const shareCode = $derived($page.url.searchParams.get("share") ?? "");
+    const invitationRequired = $derived(inviteOnly && !token && !shareCode);
 
     async function handleRegister() {
         error = "";
@@ -25,6 +26,7 @@
                 password,
                 name,
                 token: token || undefined,
+                shareCode: shareCode || undefined,
             });
             user.set(response.user);
 
@@ -55,6 +57,8 @@
             <h2 class="text-3xl font-semibold text-white mt-4">
                 {#if token}
                     Complete Your Invitation
+                {:else if shareCode}
+                    Join Your Group
                 {:else if inviteOnly}
                     Invitation Required
                 {:else}
@@ -98,6 +102,10 @@
                 {#if token}
                     <div class="bg-dark-200/70 border border-dark-100 text-gray-200 p-3 rounded text-sm">
                         You're invited! Fill out the form below to create your account and join the group.
+                    </div>
+                {:else if shareCode}
+                    <div class="bg-dark-200/70 border border-dark-100 text-gray-200 p-3 rounded text-sm">
+                        You're joining via a share link. Create your account to join the group.
                     </div>
                 {/if}
 
@@ -146,7 +154,7 @@
                 >
                     {#if loading}
                         Creating account...
-                    {:else if token}
+                    {:else if token || shareCode}
                         Create Account & Join Group
                     {:else}
                         Create Account

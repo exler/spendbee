@@ -2,7 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import bcrypt from "bcryptjs";
 import { db } from "$lib/server/db";
-import { users, groupMembers, invitationTokens } from "$lib/server/db/schema";
+import { users, groupMembers, invitationTokens, groups } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { signJWT } from "$lib/server/auth";
 import { inviteOnly } from "$lib/settings";
@@ -10,7 +10,7 @@ import { inviteOnly } from "$lib/settings";
 export const POST: RequestHandler = async ({ request, cookies }) => {
     try {
         const body = await request.json();
-        const { email, password, name, token } = body;
+        const { email, password, name, token, shareCode } = body;
         // Validation
         if (!email || !password || !name) {
             return json({ error: "Missing required fields" }, { status: 400 });
@@ -20,8 +20,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
             return json({ error: "Password must be at least 6 characters" }, { status: 400 });
         }
 
-        // Check if invitation token is required (no token = require invitation)
-        if (!token && inviteOnly) {
+        // Check if invitation token is required (no token/share code = require invitation)
+        if (!token && !shareCode && inviteOnly) {
             return json(
                 { error: "Registration requires an invitation. Please ask a group member to invite you." },
                 { status: 403 },
@@ -30,6 +30,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
         let invitation: typeof invitationTokens.$inferSelect | null = null;
         let invitationGroup: { uuid: string } | null = null;
+        let shareGroup: { id: number; uuid: string } | null = null;
 
         if (token) {
             // Validate invitation token
@@ -56,6 +57,22 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
             invitation = invitationWithGroup;
             invitationGroup = invitationWithGroup.group;
+        }
+
+        if (shareCode && !invitation) {
+            const shareLinkGroup = await db.query.groups.findFirst({
+                where: and(eq(groups.shareCode, shareCode), eq(groups.shareEnabled, true)),
+                columns: {
+                    id: true,
+                    uuid: true,
+                },
+            });
+
+            if (!shareLinkGroup) {
+                return json({ error: "Share link is invalid or disabled" }, { status: 400 });
+            }
+
+            shareGroup = shareLinkGroup;
         }
 
         // Check if user already exists
@@ -93,6 +110,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
             await db.update(invitationTokens).set({ used: true }).where(eq(invitationTokens.id, invitation.id));
 
             groupUuid = invitationGroup?.uuid ?? null;
+        } else if (shareGroup) {
+            await db.insert(groupMembers).values({
+                groupId: shareGroup.id,
+                userId: user.id,
+            });
+
+            groupUuid = shareGroup.uuid;
         }
 
         // Generate JWT

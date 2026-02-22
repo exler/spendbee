@@ -25,6 +25,10 @@ export const groups = sqliteTable(
         description: text("description"),
         baseCurrency: text("base_currency").default("EUR"),
         imageUrl: text("image_url"),
+        shareCode: text("share_code").unique(),
+        shareEnabled: integer("share_enabled", { mode: "boolean" })
+            .notNull()
+            .default(false),
         archived: integer("archived", { mode: "boolean" }).notNull().default(false),
         createdBy: integer("created_by")
             .notNull()
@@ -35,6 +39,7 @@ export const groups = sqliteTable(
     },
     (table) => ({
         uuidIdx: index("groups_uuid_idx").on(table.uuid),
+        shareCodeIdx: index("groups_share_code_idx").on(table.shareCode),
     }),
 );
 

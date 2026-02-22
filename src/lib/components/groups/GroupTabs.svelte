@@ -1,8 +1,11 @@
 <script lang="ts">
     import { resolve } from "$app/paths";
+    import { cn } from "$lib/utils";
 
-    export let groupUuid: string;
-    export let activeSection: string;
+    const { groupUuid, activeSection } = $props<{
+        groupUuid: string;
+        activeSection: string;
+    }>();
 
     const tabs = [
         { key: "expenses", label: "Expenses" },
@@ -15,10 +18,10 @@
     {#each tabs as tab (tab.key)}
         <a
             href={resolve(`/groups/${groupUuid}/${tab.key}`)}
-            class="px-5 py-2 rounded-full text-sm font-medium transition {activeSection ===
-            tab.key
-                ? 'bg-primary text-dark'
-                : 'bg-dark-200 text-gray-300 hover:text-white'}"
+            class={cn("px-5 py-2 rounded-full text-sm font-medium transition", {
+                "bg-primary text-dark": activeSection === tab.key,
+                "bg-dark-200 text-gray-300 hover:text-white": activeSection !== tab.key,
+            })}
         >
             {tab.label}
         </a>
