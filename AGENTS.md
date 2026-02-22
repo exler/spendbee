@@ -42,6 +42,9 @@ spendbee/
 ├── static/
 │   ├── site.webmanifest     # PWA manifest
 │   └── uploads/             # Receipt images
+├── tests/
+│   ├── app.test.ts          # Tests
+│   └── helpers.ts/          # Useful testing utilities
 ├── drizzle/                 # Database migrations
 ├── spendbee.db              # SQLite database file
 └── package.json
@@ -112,6 +115,9 @@ bun --bun run dev
 
 # Generate the production build
 bun --bun run build
+
+# Run tests
+bun test
 
 # Database migrations
 bun run db:generate  # Generate migrations
