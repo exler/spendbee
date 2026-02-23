@@ -108,7 +108,7 @@
             });
             resetExpenseForm();
             showAddExpense = false;
-            loadGroupData();
+            await refresh();
         } catch (e) {
             $error = e instanceof Error ? e.message : "Failed to add expense";
         }
@@ -485,7 +485,7 @@
             resetExpenseForm();
             showEditExpense = false;
             editingExpenseId = null;
-            loadGroupData();
+            await refresh();
         } catch (e) {
             $error = e instanceof Error ? e.message : "Failed to update expense";
         }
@@ -496,7 +496,7 @@
 
         try {
             await api.expenses.delete(expenseId);
-            loadGroupData();
+            await refresh();
         } catch (e) {
             $error = e instanceof Error ? e.message : "Failed to delete expense";
         }
@@ -1650,25 +1650,15 @@
 {/if}
 
 {#if previewImageUrl}
-    <div
-        class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
-        onclick={() => (previewImageUrl = null)}
-        role="button"
-        tabindex="0"
-        onkeydown={(e) => e.key === "Escape" && (previewImageUrl = null)}
-    >
+    <div class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
         <div class="max-w-4xl max-h-full">
             <img
                 src={`/api/receipts/view/${encodeURIComponent(previewImageUrl)}`}
                 alt="Preview"
                 class="max-w-full max-h-[90vh] object-contain rounded-lg"
-                onclick={(event) => event.stopPropagation()}
             />
             <button
-                onclick={(event) => {
-                    event.stopPropagation();
-                    previewImageUrl = null;
-                }}
+                onclick={() => (previewImageUrl = null)}
                 class="mt-4 w-full bg-dark-300 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-200 transition"
             >
                 Close
@@ -1680,25 +1670,15 @@
 {#if showReceiptPreview !== null}
     {@const expense = $expenses.find((e) => e.id === showReceiptPreview)}
     {#if expense && expense.receiptImageUrl}
-        <div
-            class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
-            onclick={() => (showReceiptPreview = null)}
-            role="button"
-            tabindex="0"
-            onkeydown={(e) => e.key === "Escape" && (showReceiptPreview = null)}
-        >
+        <div class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
             <div class="max-w-4xl max-h-full">
                 <img
                     src={`/api/receipts/view/${encodeURIComponent(expense.receiptImageUrl)}`}
                     alt="Receipt"
                     class="max-w-full max-h-[90vh] object-contain rounded-lg"
-                    onclick={(event) => event.stopPropagation()}
                 />
                 <button
-                    onclick={(event) => {
-                        event.stopPropagation();
-                        showReceiptPreview = null;
-                    }}
+                    onclick={() => (showReceiptPreview = null)}
                     class="mt-4 w-full bg-dark-300 text-white py-2 px-4 rounded-lg font-semibold hover:bg-dark-200 transition"
                 >
                     Close

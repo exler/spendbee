@@ -214,16 +214,6 @@ class EmailService {
             color: #9ca3af;
             word-break: break-all;
         }
-        .highlight-box {
-            background-color: #3A3B40;
-            border-left: 4px solid #FFC700;
-            padding: 16px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-        .highlight-box strong {
-            color: #ffffff;
-        }
     </style>
 </head>
 <body>
@@ -376,13 +366,6 @@ class EmailService {
             color: #9ca3af;
             word-break: break-all;
         }
-        .info-box {
-            background-color: #3A3B40;
-            border-left: 4px solid #FFC700;
-            padding: 16px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
     </style>
 </head>
 <body>
@@ -398,18 +381,8 @@ class EmailService {
                 <span class="group-name">${groupName}</span> on Spendbee.
             </p>
 
-            <div class="info-box">
-                <p style="margin: 0; color: #ffffff;">
-                    <strong>✨ Start tracking expenses together</strong>
-                </p>
-                <p style="margin: 10px 0 0 0; color: #d1d5db;">
-                    Join the group to collaborate on shared expenses, view balances, and settle debts easily.
-                </p>
-            </div>
-
             <p>
-                Spendbee helps you track shared expenses and manage group finances effortlessly.
-                Perfect for roommates, trips, couples, and any shared expenses!
+                Join the group to collaborate on shared expenses, view balances, and settle debts easily.
             </p>
         </div>
 

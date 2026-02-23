@@ -171,22 +171,30 @@
                     </div>
 
                     {#if error}
-                        <div class="mb-4 rounded-xl border border-red-500/60 bg-red-900/50 px-4 py-3 text-sm text-red-200">
+                        <div
+                            class="mb-4 rounded-xl border border-red-500/60 bg-red-900/50 px-4 py-3 text-sm text-red-200"
+                        >
                             {error}
                         </div>
                     {/if}
 
                     {#if success}
-                        <div class="mb-4 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary">
+                        <div
+                            class="mb-4 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-primary"
+                        >
                             {success}
                         </div>
                     {/if}
 
                     {#if loading}
-                        <div class="rounded-3xl border border-dark-100/60 bg-dark-300/60 p-8 text-gray-400">Loading...</div>
+                        <div class="rounded-3xl border border-dark-100/60 bg-dark-300/60 p-8 text-gray-400">
+                            Loading...
+                        </div>
                     {:else}
                         <div class="grid gap-6 lg:grid-cols-[260px,1fr]">
-                            <section class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+                            <section
+                                class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+                            >
                                 <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Profile</div>
                                 <div class="mt-4 flex flex-col items-center text-center">
                                     <div class="relative">
@@ -222,7 +230,9 @@
                             </section>
 
                             <section class="space-y-6">
-                                <div class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+                                <div
+                                    class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+                                >
                                     <div class="flex items-center justify-between">
                                         <div>
                                             <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Personal</div>
@@ -242,7 +252,8 @@
                                             />
                                         </div>
                                         <div>
-                                            <label for="profileEmail" class="text-sm text-gray-300">Email address</label>
+                                            <label for="profileEmail" class="text-sm text-gray-300">Email address</label
+                                            >
                                             <input
                                                 id="profileEmail"
                                                 type="email"
@@ -267,7 +278,9 @@
                                     </div>
                                 </div>
 
-                                <div class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+                                <div
+                                    class="rounded-3xl border border-dark-100/70 bg-dark-300/60 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+                                >
                                     <div class="text-xs uppercase tracking-[0.3em] text-gray-500">Security</div>
                                     <h2 class="text-2xl font-semibold mt-2">Password</h2>
                                     <p class="mt-2 text-sm text-gray-400">
@@ -276,7 +289,9 @@
 
                                     <div class="mt-6 grid gap-4 md:grid-cols-3">
                                         <div>
-                                            <label for="currentPassword" class="text-sm text-gray-300">Current password</label>
+                                            <label for="currentPassword" class="text-sm text-gray-300"
+                                                >Current password</label
+                                            >
                                             <input
                                                 id="currentPassword"
                                                 type="password"
@@ -294,7 +309,9 @@
                                             />
                                         </div>
                                         <div>
-                                            <label for="confirmPassword" class="text-sm text-gray-300">Confirm new password</label>
+                                            <label for="confirmPassword" class="text-sm text-gray-300"
+                                                >Confirm new password</label
+                                            >
                                             <input
                                                 id="confirmPassword"
                                                 type="password"
