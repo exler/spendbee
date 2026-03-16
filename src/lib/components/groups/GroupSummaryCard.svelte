@@ -7,9 +7,7 @@
 </script>
 
 <div>
-    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">
-        Current group
-    </div>
+    <div class="text-xs uppercase tracking-[0.2em] text-gray-500">Current group</div>
     <div class="mt-3 rounded-2xl border border-dark-100/70 bg-dark-300/50 p-4">
         <div class="flex items-center gap-3">
             {#if group.imageUrl}
@@ -19,9 +17,7 @@
                     class="h-10 w-10 rounded-xl object-cover border border-dark-100"
                 />
             {:else}
-                <div
-                    class="h-10 w-10 rounded-xl bg-primary text-dark flex items-center justify-center font-semibold"
-                >
+                <div class="h-10 w-10 rounded-xl bg-primary text-dark flex items-center justify-center font-semibold">
                     {group.name?.slice(0, 1) || "G"}
                 </div>
             {/if}
@@ -31,6 +27,7 @@
             </div>
         </div>
         <button
+            type="button"
             onclick={onInvite}
             class="mt-4 w-full rounded-lg bg-primary text-dark py-2 text-sm font-semibold hover:bg-primary-400"
         >

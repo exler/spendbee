@@ -70,6 +70,7 @@
                     <div class="text-lg font-semibold text-white">{$user?.name}</div>
                     <div class="text-sm text-gray-400">{$user?.email || "Signed in"}</div>
                     <button
+                        type="button"
                         onclick={() => logout()}
                         class="mt-3 w-full rounded-lg border border-dark-100/70 px-3 py-2 text-xs uppercase tracking-[0.25em] text-gray-300 hover:bg-dark-200/70 hover:text-white transition"
                     >

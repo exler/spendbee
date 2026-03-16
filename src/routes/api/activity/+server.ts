@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { activities, groupMembers, groups } from "$lib/server/db/schema";
+import { activities, groupMembers } from "$lib/server/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
 import { requireAuth } from "$lib/server/utils";
 
